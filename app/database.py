@@ -13,6 +13,11 @@ class DatabaseConfig:
         self.supabase_url = os.getenv('SUPABASE_URL')
         self.supabase_key = os.getenv('SUPABASE_KEY')
         self.database_url = os.getenv('DATABASE_URL')
+        
+        # 環境変数の確認
+        print(f"🔍 SUPABASE_URL: {'✅' if self.supabase_url else '❌'}")
+        print(f"🔍 DATABASE_URL: {'✅' if self.database_url else '❌'}")
+        
         self.use_postgres = bool(self.database_url)
         
         # Supabaseクライアントの初期化
@@ -22,6 +27,7 @@ class DatabaseConfig:
                 print("✅ Supabaseクライアント初期化成功")
             except Exception as e:
                 print(f"❌ Supabaseクライアント初期化エラー: {e}")
+                self.use_postgres = False
         
     def get_db_connection(self):
         """データベース接続を取得"""
@@ -35,14 +41,27 @@ class DatabaseConfig:
                 print("✅ PostgreSQL接続成功")
                 return conn
             else:
-                # ローカル開発用のSQLite
-                conn = sqlite3.connect('database/shop.db')
+                # ローカル開発用のSQLite（本番環境でも環境変数がない場合のフォールバック）
+                import os
+                db_path = os.path.join(os.path.dirname(__file__), '..', 'database', 'shop.db')
+                if not os.path.exists(db_path):
+                    # SQLiteファイルが存在しない場合は作成
+                    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+                    
+                conn = sqlite3.connect(db_path)
                 conn.row_factory = sqlite3.Row  # 辞書形式でアクセス
-                print("✅ SQLite接続成功")
+                print("✅ SQLite接続成功（フォールバック）")
                 return conn
         except Exception as e:
             print(f"❌ データベース接続エラー: {e}")
-            return None
+            # 最終フォールバック：メモリ内SQLite
+            try:
+                conn = sqlite3.connect(':memory:')
+                conn.row_factory = sqlite3.Row
+                print("⚠️ メモリ内SQLite使用（一時的）")
+                return conn
+            except:
+                return None
     
     def get_supabase_client(self):
         """Supabaseクライアントを取得"""

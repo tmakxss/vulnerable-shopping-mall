@@ -25,8 +25,33 @@ def create_app():
             'status': 'OK',
             'message': 'Application is running',
             'environment': os.getenv('FLASK_ENV', 'development'),
-            'database': 'Connected' if os.getenv('DATABASE_URL') else 'Local SQLite'
+            'database': 'PostgreSQL' if os.getenv('DATABASE_URL') else 'SQLite',
+            'supabase_configured': bool(os.getenv('SUPABASE_URL')),
+            'env_variables': {
+                'SUPABASE_URL': '✅' if os.getenv('SUPABASE_URL') else '❌',
+                'SUPABASE_KEY': '✅' if os.getenv('SUPABASE_KEY') else '❌',
+                'DATABASE_URL': '✅' if os.getenv('DATABASE_URL') else '❌',
+                'FLASK_SECRET_KEY': '✅' if os.getenv('FLASK_SECRET_KEY') else '❌'
+            }
         })
+        
+    # データベース接続テスト用エンドポイント
+    @app.route('/db-test')
+    def db_test():
+        try:
+            from app.database import db_config
+            # 簡単なクエリでテスト
+            result = db_config.execute_query("SELECT 1 as test")
+            return jsonify({
+                'database_connection': 'Success',
+                'query_result': result,
+                'connection_type': 'PostgreSQL' if db_config.use_postgres else 'SQLite'
+            })
+        except Exception as e:
+            return jsonify({
+                'database_connection': 'Failed',
+                'error': str(e)
+            }), 500
     
     # エラーハンドラー
     @app.errorhandler(500)
