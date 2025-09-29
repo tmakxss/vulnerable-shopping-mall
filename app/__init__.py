@@ -412,46 +412,214 @@ def create_app():
                 'debug': 'テンプレートまたはデータベース接続の問題が発生しました'
             })
     
-    # シンプルテーブル作成テスト
+    # 代替接続エンドポイント（IPv6無効・IPv4強制）
+    @app.route('/api/alt-connect')
+    def alt_connect():
+        try:
+            # 代替のDATABASE_URL形式を試行
+            original_url = os.getenv('DATABASE_URL')
+            if not original_url:
+                return jsonify({'error': 'DATABASE_URL not set'})
+            
+            # Supabaseの代替接続方法
+            alternate_urls = []
+            
+            # 1. IPv4を強制する設定
+            if 'aws-0-ap-northeast-1.compute.amazonaws.com' in original_url:
+                # pooler-mode (port 6543) を試行
+                pooler_url = original_url.replace(':5432/', ':6543/')
+                alternate_urls.append(('pooler_mode', pooler_url))
+                
+                # direct-mode を試行
+                direct_url = original_url.replace('aws-0-ap-northeast-1', 'db.ucekealywqkiirpndaut.supabase.co')
+                alternate_urls.append(('direct_mode', direct_url))
+            
+            results = []
+            
+            for method, url in alternate_urls:
+                try:
+                    import psycopg2
+                    from psycopg2.extras import RealDictCursor
+                    
+                    conn = psycopg2.connect(
+                        url,
+                        cursor_factory=RealDictCursor,
+                        connect_timeout=10
+                    )
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT 1 as success, current_database() as db")
+                    result = cursor.fetchone()
+                    cursor.close()
+                    conn.close()
+                    
+                    return jsonify({
+                        'success': True,
+                        'method': method,
+                        'result': dict(result) if result else None,
+                        'url_used': url[:60] + '...' if len(url) > 60 else url
+                    })
+                    
+                except Exception as e:
+                    results.append({
+                        'method': method,
+                        'error': str(e),
+                        'error_type': type(e).__name__
+                    })
+            
+            return jsonify({
+                'success': False,
+                'message': 'All alternate methods failed',
+                'attempts': results,
+                'original_url_preview': original_url[:60] + '...' if len(original_url) > 60 else original_url
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'error_type': type(e).__name__
+            })
+    
+    # 高度な接続診断テスト
     @app.route('/api/simple-test')
     def simple_test():
         try:
-            import psycopg2
-            import psycopg2.extras
+            # 環境変数の確認
+            database_url = os.getenv('DATABASE_URL')
+            supabase_url = os.getenv('SUPABASE_URL')
+            supabase_key = os.getenv('SUPABASE_KEY')
             
-            # 直接psycopg2で接続してテスト
-            conn = psycopg2.connect(
-                os.getenv('DATABASE_URL'),
-                cursor_factory=psycopg2.extras.RealDictCursor
-            )
-            conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+            if not database_url:
+                return jsonify({
+                    'success': False,
+                    'error': 'DATABASE_URL not set',
+                    'error_type': 'ConfigurationError'
+                })
             
-            cursor = conn.cursor()
+            # 複数の接続方法を試行
+            connection_attempts = []
             
-            # シンプルなテーブル作成テスト
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS test_table (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(100)
+            # 方法1: 元のDATABASE_URLで接続（タイムアウト設定あり）
+            try:
+                import psycopg2
+                from psycopg2.extras import RealDictCursor
+                
+                conn = psycopg2.connect(
+                    database_url, 
+                    cursor_factory=RealDictCursor,
+                    connect_timeout=15,
+                    application_name='vulnerable_shop_test'
                 )
-            """)
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1 as test_value, current_database(), current_user")
+                result = cursor.fetchone()
+                cursor.close()
+                conn.close()
+                
+                return jsonify({
+                    'success': True,
+                    'method': 'direct_psycopg2',
+                    'message': 'Database connection successful',
+                    'test_result': dict(result) if result else None,
+                    'database_url_preview': database_url[:50] + '...' if len(database_url) > 50 else database_url
+                })
+                
+            except Exception as e1:
+                connection_attempts.append({
+                    'method': 'direct_psycopg2',
+                    'error': str(e1),
+                    'error_type': type(e1).__name__
+                })
             
-            # テストデータ挿入
-            cursor.execute("INSERT INTO test_table (name) VALUES ('test') RETURNING id")
-            insert_result = cursor.fetchone()
+            # 方法2: Supabaseクライアント経由
+            if supabase_url and supabase_key:
+                try:
+                    from supabase import create_client
+                    supabase_client = create_client(supabase_url, supabase_key)
+                    
+                    # REST APIでテーブル一覧取得を試行
+                    response = supabase_client.rpc('version', {}).execute()
+                    
+                    return jsonify({
+                        'success': True,
+                        'method': 'supabase_client',
+                        'message': 'Supabase client connection successful',
+                        'test_result': response.data if hasattr(response, 'data') else str(response),
+                        'supabase_url': supabase_url
+                    })
+                    
+                except Exception as e2:
+                    connection_attempts.append({
+                        'method': 'supabase_client',
+                        'error': str(e2),
+                        'error_type': type(e2).__name__
+                    })
             
-            # データ確認
-            cursor.execute("SELECT * FROM test_table LIMIT 5")
-            result = cursor.fetchall()
+            # 方法3: 手動解析したパラメータで接続
+            try:
+                import urllib.parse
+                parsed = urllib.parse.urlparse(database_url)
+                
+                # ホスト名のIPアドレス解決を試行
+                import socket
+                try:
+                    ip_address = socket.gethostbyname(parsed.hostname)
+                    connection_attempts.append({
+                        'dns_resolution': f'SUCCESS: {parsed.hostname} -> {ip_address}'
+                    })
+                except Exception as dns_e:
+                    connection_attempts.append({
+                        'dns_resolution': f'FAILED: {str(dns_e)}'
+                    })
+                
+                conn = psycopg2.connect(
+                    host=parsed.hostname,
+                    port=parsed.port or 5432,
+                    database=parsed.path[1:] if parsed.path.startswith('/') else parsed.path,
+                    user=parsed.username,
+                    password=parsed.password,
+                    cursor_factory=RealDictCursor,
+                    connect_timeout=15
+                )
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1 as test_value, version()")
+                result = cursor.fetchone()
+                cursor.close()
+                conn.close()
+                
+                return jsonify({
+                    'success': True,
+                    'method': 'manual_parsing',
+                    'message': 'Database connection successful via manual parsing',
+                    'test_result': dict(result) if result else None,
+                    'connection_info': {
+                        'host': parsed.hostname,
+                        'port': parsed.port or 5432,
+                        'database': parsed.path[1:] if parsed.path.startswith('/') else parsed.path,
+                        'user': parsed.username
+                    }
+                })
+                
+            except Exception as e3:
+                connection_attempts.append({
+                    'method': 'manual_parsing',
+                    'error': str(e3),
+                    'error_type': type(e3).__name__
+                })
             
-            conn.close()
-            
+            # すべての方法が失敗した場合
             return jsonify({
-                'success': True,
-                'message': 'Direct connection test successful',
-                'inserted_id': dict(insert_result) if insert_result else None,
-                'table_data': [dict(row) for row in result]
-            })
+                'success': False,
+                'error': 'All connection methods failed',
+                'error_type': 'ConnectionError',
+                'attempts': connection_attempts,
+                'environment_info': {
+                    'has_database_url': bool(database_url),
+                    'has_supabase_url': bool(supabase_url),
+                    'has_supabase_key': bool(supabase_key),
+                    'database_url_length': len(database_url) if database_url else 0
+                }
+            }), 500
             
         except Exception as e:
             return jsonify({
