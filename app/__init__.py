@@ -35,22 +35,42 @@ def create_app():
             }
         })
         
-    # データベース接続テスト用エンドポイント
+    # データベース接続テスト用エンドポイント（詳細版）
     @app.route('/db-test')
     def db_test():
         try:
             from app.database import db_config
-            # 簡単なクエリでテスト
+            
+            # 基本接続テスト
             result = db_config.execute_query("SELECT 1 as test")
+            
+            # 接続情報を取得
+            db_info = db_config.execute_query("""
+                SELECT 
+                    current_database() as database_name,
+                    current_schema() as current_schema,
+                    session_user as session_user,
+                    current_user as current_user,
+                    version() as postgres_version
+            """)
+            
+            # スキーマ検索パスを確認
+            search_path = db_config.execute_query("SHOW search_path")
+            
             return jsonify({
                 'database_connection': 'Success',
-                'query_result': result,
-                'connection_type': 'PostgreSQL' if db_config.use_postgres else 'SQLite'
+                'connection_type': 'PostgreSQL' if db_config.use_postgres else 'SQLite',
+                'test_query': result,
+                'database_info': db_info[0] if db_info else None,
+                'search_path': search_path[0] if search_path else None,
+                'database_url_configured': bool(os.getenv('DATABASE_URL'))
             })
+            
         except Exception as e:
             return jsonify({
                 'database_connection': 'Failed',
-                'error': str(e)
+                'error': str(e),
+                'error_type': type(e).__name__
             }), 500
     
     # 商品データ直接取得エンドポイント
@@ -142,31 +162,49 @@ def create_app():
                 'error_type': type(e).__name__
             }), 500
     
-    # 全テーブル一覧確認エンドポイント
+    # 全テーブル一覧確認エンドポイント（詳細診断版）
     @app.route('/api/tables')
     def api_tables():
         try:
             from app.database import db_config
             
-            tables = db_config.execute_query("""
-                SELECT table_name, 
-                       (SELECT COUNT(*) FROM information_schema.columns 
-                        WHERE table_name = t.table_name AND table_schema = 'public') as column_count
-                FROM information_schema.tables t
-                WHERE table_schema = 'public'
+            # 全スキーマのテーブルを検索
+            all_tables = db_config.execute_query("""
+                SELECT table_schema, table_name, table_type
+                FROM information_schema.tables 
+                WHERE table_type = 'BASE TABLE'
+                ORDER BY table_schema, table_name
+            """)
+            
+            # publicスキーマのテーブルのみ
+            public_tables = db_config.execute_query("""
+                SELECT table_name
+                FROM information_schema.tables 
+                WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
                 ORDER BY table_name
             """)
+            
+            # 現在のスキーマを確認
+            current_schema = db_config.execute_query("SELECT current_schema()")
+            
+            # データベース名を確認
+            current_db = db_config.execute_query("SELECT current_database()")
             
             return jsonify({
                 'success': True,
                 'database_type': 'PostgreSQL' if db_config.use_postgres else 'SQLite',
-                'tables': tables
+                'current_database': current_db[0] if current_db else None,
+                'current_schema': current_schema[0] if current_schema else None,
+                'public_tables': public_tables,
+                'all_tables': all_tables,
+                'total_tables': len(all_tables)
             })
             
         except Exception as e:
             return jsonify({
                 'success': False,
-                'error': str(e)
+                'error': str(e),
+                'error_type': type(e).__name__
             }), 500
     
     # 緊急用: テーブル作成エンドポイント
@@ -305,5 +343,37 @@ def create_app():
                 'error': 'Some modules failed to load',
                 'debug': 'テンプレートまたはデータベース接続の問題が発生しました'
             })
+    
+    # 直接SQL実行エンドポイント（診断用）
+    @app.route('/api/raw-sql')
+    def raw_sql():
+        try:
+            from app.database import db_config
+            
+            # 複数のクエリで詳細な情報を取得
+            queries = {
+                'pg_tables': "SELECT schemaname, tablename FROM pg_tables WHERE schemaname NOT IN ('information_schema', 'pg_catalog')",
+                'pg_namespace': "SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname != 'information_schema'",
+                'current_schemas': "SELECT unnest(current_schemas(true)) as schema_name",
+                'table_count': "SELECT count(*) as total_tables FROM information_schema.tables WHERE table_type = 'BASE TABLE'"
+            }
+            
+            results = {}
+            for name, sql in queries.items():
+                try:
+                    results[name] = db_config.execute_query(sql)
+                except Exception as e:
+                    results[name] = f"Error: {str(e)}"
+            
+            return jsonify({
+                'success': True,
+                'results': results
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
     
     return app 
