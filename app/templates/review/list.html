@@ -1,0 +1,58 @@
+{% extends "base.html" %} {% block title %}レビュー一覧 - ショッピングモール{%
+endblock %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <h4 class="mb-4">レビュー一覧</h4>
+
+    {% if reviews %}
+    <div class="reviews-list">
+      {% for review in reviews %}
+      <div class="card mb-4">
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-2">
+              <img
+                src="{{ review[8] }}"
+                alt="{{ review[7] }}"
+                class="img-fluid rounded"
+                style="width: 100px; height: 100px; object-fit: cover"
+              />
+            </div>
+            <div class="col-md-10">
+              <div
+                class="d-flex justify-content-between align-items-start mb-2"
+              >
+                <div>
+                  <h6 class="card-title mb-1">{{ review[7] }}</h6>
+                  <p class="text-muted small mb-0">投稿者: {{ review[6] }}</p>
+                </div>
+                <div class="text-end">
+                  <span class="text-warning">⭐ {{ review[3] }}/5</span>
+                  <br />
+                  <small class="text-muted">{{ review[5] }}</small>
+                </div>
+              </div>
+              <div class="review-content mt-3">
+                <p class="mb-3">{{ review[4] | safe }}</p>
+                <a
+                  href="/review/{{ review[0] }}"
+                  class="btn btn-outline-primary btn-sm"
+                  >詳細を見る</a
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <h5 class="text-muted">レビューがありません</h5>
+      <p class="text-muted">まだレビューが投稿されていません。</p>
+      <a href="/products" class="btn btn-primary">商品を見る</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

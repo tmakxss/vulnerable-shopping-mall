@@ -1,0 +1,59 @@
+{% extends "base.html" %} {% block title %}サイトについて -
+脆弱なショッピングモール{% endblock %} {% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h1>脆弱なショッピングモールについて</h1>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <h3>🎯 目的</h3>
+        <p>
+          このサイトはウェブセキュリティの学習と演習のために作成された脆弱性を含むショッピングサイトです。実際のWebアプリケーションで発生する可能性のあるセキュリティ問題を安全な環境で体験し、理解を深めることができます。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h5>⚠️ 重要なお知らせ</h5>
+      </div>
+      <div class="card-body">
+        <ul class="list-unstyled">
+          <li class="mb-2">✅ このサイトは学習目的のみで使用</li>
+          <li class="mb-2">❌ 実際のWebサイトでの攻撃は違法</li>
+          <li class="mb-2">❌ 本番環境では絶対に使用しない</li>
+          <li class="mb-2">✅ 適切なセキュリティ対策を実装する</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header">
+        <h5>🔧 技術仕様</h5>
+      </div>
+      <div class="card-body">
+        <ul class="list-unstyled">
+          <li><strong>フレームワーク:</strong> Flask (Python)</li>
+          <li><strong>データベース:</strong> SQLite</li>
+          <li><strong>フロントエンド:</strong> Bootstrap 5</li>
+          <li><strong>言語:</strong> 日本語</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header">
+        <h5>📞 サポート</h5>
+      </div>
+      <div class="card-body">
+        <p>
+          このプロジェクトに関する質問や問題がある場合は、イシューを作成してください。
+        </p>
+        <a href="/contact" class="btn btn-primary">お問い合わせ</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

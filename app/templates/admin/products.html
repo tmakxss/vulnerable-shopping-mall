@@ -1,0 +1,119 @@
+{% extends "base.html" %} {% block title %}商品管理{% endblock %} {% block
+content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>商品管理</h1>
+    <a href="/admin" class="btn btn-secondary">
+      <i class="bi bi-arrow-left"></i> ダッシュボードに戻る
+    </a>
+  </div>
+
+  <div class="admin-search-container">
+    <form method="GET" action="/admin/products">
+      <div class="input-group">
+        <input
+          type="text"
+          class="form-control"
+          name="search"
+          placeholder="商品名またはカテゴリで検索"
+          value="{{ search }}"
+        />
+        <div class="input-group-append">
+          <button class="btn btn-primary" type="submit">検索</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="mb-4">
+    <a href="/admin/products/add" class="btn btn-primary">新商品追加</a>
+  </div>
+
+  <div class="admin-table-container">
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>商品名</th>
+            <th>説明</th>
+            <th>価格</th>
+            <th>在庫</th>
+            <th>カテゴリ</th>
+            <th>画像</th>
+            <th>作成日</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+                  {% for product in products %}
+        <tr>
+          <td>{{ product[0] }}</td>
+          <td>{{ product[2] }}</td>
+          <td>{{ product[3] }}</td>
+          <td>¥{{ product[4] | int }}</td>
+          <td>{{ product[5] }}</td>
+          <td>{{ product[6] }}</td>
+          <td>
+            {% if product[7] %}
+            <img
+              src="{{ product[7] }}"
+              alt="{{ product[2] }}"
+              style="width: 50px; height: 50px; object-fit: cover"
+            />
+            {% else %} - {% endif %}
+          </td>
+          <td>{{ product[8] }}</td>
+          <td>
+            <a
+              href="/admin/products/edit/{{ product[1] }}"
+              class="btn btn-warning btn-sm"
+              >編集</a
+            >
+            <a
+              href="/admin/products/delete/{{ product[1] }}"
+              class="btn btn-danger btn-sm"
+              onclick="return confirm('本当にこの商品を削除しますか？')"
+              >削除</a
+            >
+          </td>
+        </tr>
+        {% endfor %}
+              </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- 페이징 -->
+  {% if total_pages > 1 %}
+  <div class="d-flex justify-content-center mt-4">
+    <nav aria-label="ページネーション">
+      <ul class="pagination">
+        {% if page > 1 %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}">前へ</a>
+        </li>
+        {% endif %}
+        
+        {% for p in range(1, total_pages + 1) %}
+        <li class="page-item {% if p == page %}active{% endif %}">
+          <a class="page-link" href="?page={{ p }}{% if search %}&search={{ search }}{% endif %}">{{ p }}</a>
+        </li>
+        {% endfor %}
+        
+        {% if page < total_pages %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}">次へ</a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  
+  <div class="text-center text-muted mt-2">
+    <small>全 {{ total }} 件中 {{ (page - 1) * 20 + 1 }}-{{ [page * 20, total] | min }} 件を表示</small>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+</div>

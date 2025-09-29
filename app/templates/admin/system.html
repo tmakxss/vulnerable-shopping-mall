@@ -1,0 +1,53 @@
+{% extends "base.html" %} {% block title %}システム情報{% endblock %} {% block
+content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>システム情報</h1>
+    <a href="/admin" class="btn btn-secondary">
+      <i class="bi bi-arrow-left"></i> ダッシュボードに戻る
+    </a>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5>基本情報</h5>
+        </div>
+        <div class="card-body">
+          <p><strong>OS:</strong> {{ system_info.os }}</p>
+          <p><strong>現在のディレクトリ:</strong> {{ system_info.cwd }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5>ファイル一覧</h5>
+        </div>
+        <div class="card-body">
+          <ul class="list-unstyled">
+            {% for file in system_info.files %}
+            <li>{{ file }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header">
+          <h5>環境変数</h5>
+        </div>
+        <div class="card-body">
+          <pre>{{ system_info.env | tojson(indent=2) }}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

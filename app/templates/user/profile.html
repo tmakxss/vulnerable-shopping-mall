@@ -1,0 +1,99 @@
+{% extends "base.html" %} {% block title %}プロフィール - ショッピングモール{%
+endblock %} {% block content %}
+<div class="row">
+  <div class="col-md-8 mx-auto">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="mb-0">プロフィール</h3>
+      </div>
+      <div class="card-body">
+        {% if user %}
+        <div class="row">
+          <div class="col-md-4 text-center mb-4">
+            {% if user[8] %}
+            <img
+              src="{{ url_for('static', filename=user[8]) }}"
+              alt="プロフィール画像"
+              class="img-fluid rounded-circle mb-3"
+              style="width: 150px; height: 150px; object-fit: cover"
+            />
+            {% else %}
+            <div
+              class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
+              style="width: 150px; height: 150px"
+            >
+              <span class="text-muted">画像なし</span>
+            </div>
+            {% endif %}
+          </div>
+          <div class="col-md-8">
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <strong>ユーザー名:</strong>
+              </div>
+              <div class="col-md-8">{{ user[1] }}</div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <strong>メールアドレス:</strong>
+              </div>
+              <div class="col-md-8">{{ user[3] if user[3] else '未設定' }}</div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <strong>住所:</strong>
+              </div>
+              <div class="col-md-8">{{ user[4] if user[4] else '未設定' }}</div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <strong>電話番号:</strong>
+              </div>
+              <div class="col-md-8">{{ user[5] if user[5] else '未設定' }}</div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <strong>アカウント種別:</strong>
+              </div>
+              <div class="col-md-8">
+                {% if user[6] %}
+                <span class="badge bg-danger">管理者</span>
+                {% else %}
+                <span class="badge bg-primary">一般ユーザー</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <strong>登録日:</strong>
+              </div>
+              <div class="col-md-8">{{ user[7] if user[7] else '不明' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <a href="/user/profile/edit" class="btn btn-primary">
+            プロフィール編集
+          </a>
+          <a href="/user/password/change" class="btn btn-warning">
+            パスワード変更
+          </a>
+          <a href="/" class="btn btn-secondary"> ホームに戻る </a>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+          <h5 class="text-muted">ユーザー情報が見つかりませんでした</h5>
+          <a href="/" class="btn btn-primary">ホームに戻る</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %} {% block title %}チェックアウト -
+脆弱なショッピングモール{% endblock %} {% block content %}
+<h1>チェックアウト</h1>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5>注文情報</h5>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="/checkout">
+          <div class="mb-3">
+            <label for="shipping_address" class="form-label">配送先住所</label>
+            <textarea
+              class="form-control"
+              id="shipping_address"
+              name="shipping_address"
+              rows="3"
+              required
+            ></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label for="payment_method" class="form-label">支払い方法</label>
+            <select
+              class="form-select"
+              id="payment_method"
+              name="payment_method"
+              required
+            >
+              <option value="">選択してください</option>
+              <option value="credit_card">クレジットカード</option>
+              <option value="bank_transfer">銀行振込</option>
+              <option value="cash_on_delivery">代金引換</option>
+            </select>
+          </div>
+
+          <!-- 隠しフィールド (脆弱性) -->
+          <input type="hidden" name="total_amount" value="{{ total }}" />
+
+          <button type="submit" class="btn btn-primary">注文を確定</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h5>注文サマリー</h5>
+      </div>
+      <div class="card-body">
+        {% for item in cart_items %}
+        <div class="d-flex justify-content-between mb-2">
+          <span>{{ item[0] }} × {{ item[2] }}</span>
+          <span>¥{{ "{:,}".format(item[3]|int) }}</span>
+        </div>
+        {% endfor %}
+        <hr />
+        <div class="d-flex justify-content-between mb-2">
+          <span>小計:</span>
+          <span>¥{{ "{:,}".format(total|int) }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span>送料:</span>
+          <span>¥0</span>
+        </div>
+        <hr />
+        <div class="d-flex justify-content-between">
+          <strong>合計:</strong>
+          <strong class="cart-total">¥{{ "{:,}".format(total|int) }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

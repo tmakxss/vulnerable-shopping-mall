@@ -1,0 +1,96 @@
+{% extends "base.html" %} {% block title %}ユーザー編集{% endblock %} {% block
+content %}
+<div class="container mt-4">
+  <h1>ユーザー編集</h1>
+
+  <div class="row">
+    <div class="col-md-8">
+      <form method="POST">
+        <div class="mb-3">
+          <label for="username" class="form-label">ユーザー名</label>
+          <input
+            type="text"
+            class="form-control"
+            id="username"
+            name="username"
+            value="{{ user[1] }}"
+            required
+          />
+        </div>
+
+        <div class="mb-3">
+          <label for="email" class="form-label">メールアドレス</label>
+          <input
+            type="email"
+            class="form-control"
+            id="email"
+            name="email"
+            value="{{ user[2] }}"
+            required
+          />
+        </div>
+
+        <div class="mb-3">
+          <label for="address" class="form-label">住所</label>
+          <input
+            type="text"
+            class="form-control"
+            id="address"
+            name="address"
+            value="{{ user[4] or '' }}"
+          />
+        </div>
+
+        <div class="mb-3">
+          <label for="phone" class="form-label">電話番号</label>
+          <input
+            type="text"
+            class="form-control"
+            id="phone"
+            name="phone"
+            value="{{ user[5] or '' }}"
+          />
+        </div>
+
+        <div class="mb-3">
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="is_admin"
+              name="is_admin"
+              {%
+              if
+              user[6]
+              %}checked{%
+              endif
+              %}
+            />
+            <label class="form-check-label" for="is_admin"> 管理者権限 </label>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="new_password" class="form-label"
+            >新しいパスワード (変更しない場合は空欄)</label
+          >
+          <input
+            type="password"
+            class="form-control"
+            id="new_password"
+            name="new_password"
+          />
+        </div>
+
+        <div class="mb-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">更新</button>
+          <a href="/admin/users" class="btn btn-secondary">キャンセル</a>
+          <a href="/admin/users" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> ユーザー一覧に戻る
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

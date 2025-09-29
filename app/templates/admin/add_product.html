@@ -1,0 +1,87 @@
+{% extends "base.html" %} {% block title %}新商品追加{% endblock %} {% block
+content %}
+<div class="container mt-4">
+  <h1>新商品追加</h1>
+
+  <div class="row">
+    <div class="col-md-8">
+      <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+          <label for="name">商品名</label>
+          <input
+            type="text"
+            class="form-control"
+            id="name"
+            name="name"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="description">説明</label>
+          <textarea
+            class="form-control"
+            id="description"
+            name="description"
+            rows="3"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="price">価格</label>
+          <input
+            type="number"
+            class="form-control"
+            id="price"
+            name="price"
+            min="0"
+            step="0.01"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="stock">在庫数</label>
+          <input
+            type="number"
+            class="form-control"
+            id="stock"
+            name="stock"
+            min="0"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="category">カテゴリ</label>
+          <input
+            type="text"
+            class="form-control"
+            id="category"
+            name="category"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="image">商品画像</label>
+          <input
+            type="file"
+            class="form-control-file"
+            id="image"
+            name="image"
+            accept="image/*"
+          />
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">商品を追加</button>
+          <a href="/admin/products" class="btn btn-secondary">キャンセル</a>
+          <a href="/admin/products" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 商品一覧に戻る
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}レビュー編集{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h1>レビュー編集</h1>
+  
+  <div class="row">
+    <div class="col-md-8">
+      <form method="POST">
+        <div class="mb-3">
+          <label for="review_id" class="form-label">レビューID</label>
+          <input type="text" class="form-control" id="review_id" value="{{ review[0] }}" readonly>
+        </div>
+        
+        <div class="mb-3">
+          <label for="product_name" class="form-label">商品名</label>
+          <input type="text" class="form-control" id="product_name" value="{{ review[7] }}" readonly>
+        </div>
+        
+        <div class="mb-3">
+          <label for="username" class="form-label">ユーザー名</label>
+          <input type="text" class="form-control" id="username" value="{{ review[6] }}" readonly>
+        </div>
+        
+        <div class="mb-3">
+          <label for="rating" class="form-label">評価</label>
+          <select class="form-control" id="rating" name="rating" required>
+            <option value="1" {% if review[3] == 1 %}selected{% endif %}>1 - 非常に悪い</option>
+            <option value="2" {% if review[3] == 2 %}selected{% endif %}>2 - 悪い</option>
+            <option value="3" {% if review[3] == 3 %}selected{% endif %}>3 - 普通</option>
+            <option value="4" {% if review[3] == 4 %}selected{% endif %}>4 - 良い</option>
+            <option value="5" {% if review[3] == 5 %}selected{% endif %}>5 - 非常に良い</option>
+          </select>
+        </div>
+        
+        <div class="mb-3">
+          <label for="comment" class="form-label">コメント</label>
+          <textarea class="form-control" id="comment" name="comment" rows="5" required>{{ review[4] }}</textarea>
+        </div>
+        
+        <div class="mb-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">更新</button>
+          <a href="/admin/reviews" class="btn btn-secondary">キャンセル</a>
+          <a href="/admin/reviews" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> レビュー一覧に戻る
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %} 

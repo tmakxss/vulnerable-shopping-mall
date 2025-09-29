@@ -1,0 +1,123 @@
+{% extends "base.html" %} {% block title %}データベース管理{% endblock %} {%
+block content %}
+<div class="container mt-4">
+  <h1>データベース管理</h1>
+
+  <!-- 操作ボタン -->
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header">
+          <h5>データベース操作</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3 mb-2">
+              <a
+                href="/admin/database/backup"
+                class="btn btn-outline-primary btn-block"
+              >
+                📦 バックアップ作成
+              </a>
+            </div>
+            <div class="col-md-3 mb-2">
+              <a
+                href="/admin/database/reset"
+                class="btn btn-outline-danger btn-block"
+                onclick="return confirm('⚠️ 警告: データベースを初期化します。\n\n現在のデータは全て削除され、サンプルデータに置き換えられます。\n\n本当に実行しますか？')"
+              >
+                🔄 データベース初期化
+              </a>
+            </div>
+            <div class="col-md-3 mb-2">
+              <a href="/admin" class="btn btn-outline-secondary btn-block">
+                ← ダッシュボードに戻る
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- バックアップファイル一覧 -->
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header">
+          <h5>バックアップファイル一覧</h5>
+        </div>
+        <div class="card-body">
+          {% if backup_files %}
+          <div class="table-responsive">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>ファイル名</th>
+                  <th>サイズ</th>
+                  <th>作成日時</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for backup in backup_files %}
+                <tr>
+                  <td>{{ backup.filename }}</td>
+                  <td>{{ (backup.size / 1024) | round(1) }} KB</td>
+                  <td>{{ backup.created.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                  <td>
+                    <a
+                      href="/admin/database/restore/{{ backup.filename }}"
+                      class="btn btn-sm btn-outline-success"
+                      onclick="return confirm('このバックアップから復元しますか？\n\n現在のデータは上書きされます。')"
+                    >
+                      復元
+                    </a>
+                    <a
+                      href="/admin/database/delete/{{ backup.filename }}"
+                      class="btn btn-sm btn-outline-danger"
+                      onclick="return confirm('このバックアップファイルを削除しますか？\n\nこの操作は取り消せません。')"
+                    >
+                      削除
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            バックアップファイルがありません。バックアップを作成してください。
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 注意事項 -->
+  <div class="row mt-4">
+    <div class="col-md-12">
+      <div class="alert alert-warning">
+        <h6><i class="fas fa-exclamation-triangle"></i> 注意事項</h6>
+        <ul class="mb-0">
+          <li>
+            <strong>データベース初期化</strong>:
+            現在のデータは全て削除され、サンプルデータに置き換えられます
+          </li>
+          <li>
+            <strong>バックアップ復元</strong>: 現在のデータは上書きされます
+          </li>
+          <li>
+            <strong>自動バックアップ</strong>:
+            初期化・復元前に自動的にバックアップが作成されます
+          </li>
+          <li>この機能は学習目的のみで使用してください</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

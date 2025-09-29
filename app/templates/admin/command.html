@@ -1,0 +1,37 @@
+{% extends "base.html" %} {% block title %}ping test{% endblock %} {% block
+content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>ping test</h1>
+    <a href="/admin" class="btn btn-secondary">
+      <i class="bi bi-arrow-left"></i> ダッシュボードに戻る
+    </a>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8">
+      <form method="POST">
+        <div class="form-group">
+          <label for="command">コマンド</label>
+          <input
+            type="text"
+            class="form-control"
+            id="command"
+            name="command"
+            placeholder="ping 0.0.0.0"
+            value="{{ command or '' }}"
+          />
+        </div>
+        <button type="submit" class="btn btn-primary">実行</button>
+      </form>
+
+      {% if result %}
+      <div class="mt-4">
+        <h5>実行結果:</h5>
+        <pre class="bg-light p-3 border">{{ result }}</pre>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %} {% block title %}バックアップ作成{% endblock %} {%
+block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5>データベースバックアップ作成</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="/admin/database/backup">
+            <div class="form-group">
+              <label for="backup_name"
+                >バックアップ名 <span class="text-danger">*</span></label
+              >
+              <input
+                type="text"
+                class="form-control"
+                id="backup_name"
+                name="backup_name"
+                placeholder="例: before_test, production_backup, etc."
+                required
+              />
+              <small class="form-text text-muted">
+                バックアップを識別するための名前を入力してください。<br />
+                使用可能な文字:
+                英数字、ハイフン(-)、アンダースコア(_)、ドット(.)
+              </small>
+            </div>
+
+            <div class="alert alert-info">
+              <h6><i class="fas fa-info-circle"></i> バックアップ情報</h6>
+              <ul class="mb-0">
+                <li>
+                  ファイル名形式: <code>backup_[名前]_[タイムスタンプ].db</code>
+                </li>
+                <li>例: <code>backup_before_test_20241201_143022.db</code></li>
+                <li>現在のデータベースの完全なコピーが作成されます</li>
+              </ul>
+            </div>
+
+            <div class="form-group">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> バックアップ作成
+              </button>
+              <a href="/admin/database" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 戻る
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

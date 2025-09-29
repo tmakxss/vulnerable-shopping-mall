@@ -1,0 +1,146 @@
+{% extends "base.html" %} {% block title %}プロフィール編集 -
+脆弱なショッピングモール{% endblock %} {% block content %}
+<div class="row">
+  <div class="col-md-8 mx-auto">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="mb-0">✏️ プロフィール編集</h3>
+      </div>
+      <div class="card-body">
+        {% if user %}
+        <form
+          method="POST"
+          action="/user/profile/edit"
+          enctype="multipart/form-data"
+        >
+          <div class="row">
+            <div class="col-md-4 text-center mb-4">
+              <div class="mb-3">
+                {% if user[8] %}
+                <img
+                  src="{{ url_for('static', filename=user[8]) }}"
+                  alt="プロフィール画像"
+                  class="img-fluid rounded-circle"
+                  style="width: 150px; height: 150px; object-fit: cover"
+                />
+                {% else %}
+                <div
+                  class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto"
+                  style="width: 150px; height: 150px"
+                >
+                  <span class="text-muted">画像なし</span>
+                </div>
+                {% endif %}
+              </div>
+              <div class="mb-3">
+                <label for="profile_image" class="form-label"
+                  >プロフィール画像</label
+                >
+                <input
+                  type="file"
+                  class="form-control"
+                  id="profile_image"
+                  name="profile_image"
+                />
+                <div class="form-text">
+                  任意のファイルをアップロードできます (脆弱性テスト用)
+                </div>
+              </div>
+            </div>
+            <div class="col-md-8">
+              <div class="mb-3">
+                <label for="username" class="form-label">ユーザー名</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="username"
+                  value="{{ user[1] }}"
+                  readonly
+                />
+                <div class="form-text">ユーザー名は変更できません</div>
+              </div>
+
+              <div class="mb-3">
+                <label for="email" class="form-label">メールアドレス</label>
+                <input
+                  type="email"
+                  class="form-control"
+                  id="email"
+                  name="email"
+                  value="{{ user[3] if user[3] else '' }}"
+                  required
+                />
+              </div>
+
+              <div class="mb-3">
+                <label for="address" class="form-label">住所</label>
+                <textarea
+                  class="form-control"
+                  id="address"
+                  name="address"
+                  rows="3"
+                >
+{{ user[4] if user[4] else '' }}</textarea
+                >
+              </div>
+
+              <div class="mb-3">
+                <label for="phone" class="form-label">電話番号</label>
+                <input
+                  type="tel"
+                  class="form-control"
+                  id="phone"
+                  name="phone"
+                  value="{{ user[5] if user[5] else '' }}"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">💾 更新</button>
+            <a href="/user/profile" class="btn btn-secondary">
+              ❌ キャンセル
+            </a>
+          </div>
+        </form>
+        {% else %}
+        <div class="alert alert-warning">
+          <strong>⚠️ 警告:</strong> ユーザー情報が見つかりませんでした。
+        </div>
+        <a href="/user/profile" class="btn btn-primary">プロフィールに戻る</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 画像プレビュー機能
+  document
+    .getElementById("profile_image")
+    .addEventListener("change", function (e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const img =
+            document.querySelector(".img-fluid.rounded-circle") ||
+            document.querySelector(".bg-light.rounded-circle");
+          if (img.tagName === "IMG") {
+            img.src = e.target.result;
+          } else {
+            // 画像がない場合、新しいimg要素を作成
+            const newImg = document.createElement("img");
+            newImg.src = e.target.result;
+            newImg.alt = "プロフィール画像";
+            newImg.className = "img-fluid rounded-circle";
+            newImg.style = "width: 150px; height: 150px; object-fit: cover;";
+            img.parentNode.replaceChild(newImg, img);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+</script>
+{% endblock %}

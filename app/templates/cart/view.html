@@ -1,0 +1,93 @@
+{% extends "base.html" %} {% block title %}カート - 脆弱なショッピングモール{%
+endblock %} {% block content %}
+<h1>🛒 カート</h1>
+
+{% if cart_items %}
+<div class="row">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5>カート内の商品</h5>
+      </div>
+      <div class="card-body">
+        {% for item in cart_items %}
+        <div class="cart-item">
+          <div class="row align-items-center">
+            <div class="col-md-2">
+              <img
+                src="{{ item[5] }}"
+                class="img-fluid rounded"
+                alt="{{ item[1] }}"
+              />
+            </div>
+            <div class="col-md-4">
+              <h6>{{ item[1] }}</h6>
+              <p class="text-muted">¥{{ "{:,}".format(item[2]|int) }}</p>
+            </div>
+            <div class="col-md-2">
+              <form action="/cart/update" method="POST" style="display: inline">
+                <input type="hidden" name="item_id" value="{{ item[0] }}" />
+                <input
+                  type="number"
+                  name="quantity"
+                  class="form-control"
+                  value="{{ item[3] }}"
+                  min="1"
+                  onchange="this.form.submit()"
+                />
+              </form>
+            </div>
+            <div class="col-md-2">
+              <p class="text-end">
+                ¥{{ "{:,}".format((item[2]*item[3])|int) }}
+              </p>
+            </div>
+            <div class="col-md-2">
+              <form
+                action="/cart/remove/{{ item[0] }}"
+                method="POST"
+                style="display: inline"
+              >
+                <button type="submit" class="btn btn-danger btn-sm">
+                  削除
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h5>注文サマリー</h5>
+      </div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between mb-3">
+          <span>小計:</span>
+          <span>¥{{ "{:,}".format(total|int) }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-3">
+          <span>送料:</span>
+          <span>¥0</span>
+        </div>
+        <hr />
+        <div class="d-flex justify-content-between mb-3">
+          <strong>合計:</strong>
+          <strong class="cart-total">¥{{ "{:,}".format(total|int) }}</strong>
+        </div>
+        <a href="/checkout" class="btn btn-primary w-100">チェックアウト</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="text-center py-5">
+  <h3>カートが空です</h3>
+  <p>商品を追加してからお戻りください。</p>
+  <a href="/products" class="btn btn-primary">商品を見る</a>
+</div>
+{% endif %} {% endblock %}

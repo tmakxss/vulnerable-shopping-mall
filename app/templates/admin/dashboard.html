@@ -1,0 +1,103 @@
+{% extends "base.html" %} {% block title %}管理者ダッシュボード{% endblock %} {%
+block content %}
+<div class="container mt-4">
+  <h1>管理者ダッシュボード</h1>
+
+  <div class="row mt-4">
+    <div class="col-md-3">
+      <div class="card text-white bg-primary">
+        <div class="card-body">
+          <h5 class="card-title">ユーザー数</h5>
+          <p class="card-text display-4">{{ user_count }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-white bg-success">
+        <div class="card-body">
+          <h5 class="card-title">注文数</h5>
+          <p class="card-text display-4">{{ order_count }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-white bg-warning">
+        <div class="card-body">
+          <h5 class="card-title">商品数</h5>
+          <p class="card-text display-4">{{ product_count }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-white bg-info">
+        <div class="card-body">
+          <h5 class="card-title">レビュー数</h5>
+          <p class="card-text display-4">{{ review_count }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header">
+          <h5>管理メニュー</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3 mb-2">
+              <a href="/admin/users" class="btn btn-outline-primary btn-block"
+                >ユーザー管理</a
+              >
+            </div>
+            <div class="col-md-3 mb-2">
+              <a href="/admin/orders" class="btn btn-outline-success btn-block"
+                >注文管理</a
+              >
+            </div>
+            <div class="col-md-3 mb-2">
+              <a
+                href="/admin/products"
+                class="btn btn-outline-warning btn-block"
+                >商品管理</a
+              >
+            </div>
+            <div class="col-md-3 mb-2">
+              <a href="/admin/reviews" class="btn btn-outline-info btn-block"
+                >レビュー管理</a
+              >
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-3 mb-2">
+              <a
+                href="/admin/system"
+                class="btn btn-outline-secondary btn-block"
+                >システム情報</a
+              >
+            </div>
+            <div class="col-md-3 mb-2">
+              <a href="/admin/command" class="btn btn-outline-danger btn-block"
+                >ping test</a
+              >
+            </div>
+            <div class="col-md-3 mb-2">
+              <a href="/admin/config" class="btn btn-outline-dark btn-block"
+                >設定表示</a
+              >
+            </div>
+            <div class="col-md-3 mb-2">
+              <a
+                href="/admin/database"
+                class="btn btn-outline-warning btn-block"
+                >データベース管理</a
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

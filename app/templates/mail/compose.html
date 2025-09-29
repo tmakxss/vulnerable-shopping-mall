@@ -1,0 +1,68 @@
+{% extends "base.html" %} {% block title %}メール作成 -
+脆弱なショッピングモール{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header">
+          <h3>✏️ メール作成</h3>
+        </div>
+        <div class="card-body">
+          <form method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+              <label class="form-label">受信者</label>
+              <input
+                type="text"
+                name="recipient"
+                class="form-control"
+                placeholder="ユーザー名を入力 (例:test)"
+                required
+              />
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">件名</label>
+              <input
+                type="text"
+                name="subject"
+                class="form-control"
+                placeholder="件名を入力"
+                required
+              />
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">本文</label>
+              <textarea
+                name="content"
+                class="form-control"
+                rows="10"
+                placeholder="メール本文を入力"
+                required
+              ></textarea>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">添付ファイル</label>
+              <input
+                type="file"
+                name="attachments"
+                class="form-control"
+                multiple
+              />
+              <small class="text-muted">複数のファイルを選択できます</small>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">
+                📧 メール送信
+              </button>
+              <a href="/mail/inbox" class="btn btn-secondary">キャンセル</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

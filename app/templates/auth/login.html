@@ -1,0 +1,43 @@
+{% extends "base.html" %} {% block title %}ログイン - 脆弱なショッピングモール{%
+endblock %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h3>ログイン</h3>
+      </div>
+      <div class="card-body">
+        <form method="POST">
+          <div class="mb-3">
+            <label for="username" class="form-label">ユーザー名</label>
+            <input
+              type="text"
+              class="form-control"
+              id="username"
+              name="username"
+              required
+            />
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">パスワード</label>
+            <input
+              type="password"
+              class="form-control"
+              id="password"
+              name="password"
+              required
+            />
+          </div>
+          <button type="submit" class="btn btn-primary">ログイン</button>
+        </form>
+
+        <hr />
+        <p>
+          アカウントをお持ちでない方は
+          <a href="/register">新規登録</a> してください。
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

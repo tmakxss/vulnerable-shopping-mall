@@ -1,0 +1,77 @@
+{% extends "base.html" %} {% block title %}レビュー詳細 - ショッピングモール{%
+endblock %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/reviews">レビュー一覧</a></li>
+        <li class="breadcrumb-item active">レビュー詳細</li>
+      </ol>
+    </nav>
+
+    {% if review %}
+    <div class="card">
+      <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h4 class="mb-0">レビュー詳細</h4>
+          <a href="/product/{{ review[1] }}" class="btn btn-outline-primary"
+            >商品ページへ</a
+          >
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-8">
+            <div class="d-flex align-items-start mb-4">
+              <img
+                src="{{ review[8] }}"
+                alt="{{ review[7] }}"
+                class="img-fluid rounded me-4"
+                style="width: 120px; height: 120px; object-fit: cover"
+              />
+              <div>
+                <h5 class="mb-1">{{ review[7] }}</h5>
+                <p class="text-muted mb-2">投稿者: {{ review[6] }}</p>
+                <div class="mb-3">
+                  <span class="text-warning h5">⭐ {{ review[3] }}/5</span>
+                  <small class="text-muted ms-2">{{ review[5] }}</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="review-content">
+              <h6 class="mb-3">コメント</h6>
+              <div class="border rounded p-4 bg-light">
+                {{ review[4] | safe }}
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-header">
+                <h6 class="mb-0">レビュー情報</h6>
+              </div>
+              <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                  <li class="mb-2"><strong>投稿者:</strong> {{ review[6] }}</li>
+                  <li class="mb-2"><strong>商品:</strong> {{ review[7] }}</li>
+                  <li class="mb-2"><strong>評価:</strong> {{ review[3] }}/5</li>
+                  <li class="mb-0"><strong>投稿日:</strong> {{ review[5] }}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <h5 class="text-muted">レビューが見つかりません</h5>
+      <p class="text-muted">指定されたレビューは存在しません。</p>
+      <a href="/reviews" class="btn btn-primary">レビュー一覧に戻る</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

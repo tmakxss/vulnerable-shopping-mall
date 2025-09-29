@@ -1,0 +1,99 @@
+{% extends "base.html" %} {% block title %}{{ product[1] }} -
+脆弱なショッピングモール{% endblock %} {% block content %}
+<div class="row">
+  <div class="col-md-6">
+    <img
+      src="{{ product[6] }}"
+      class="img-fluid rounded"
+      alt="{{ product[1] }}"
+    />
+  </div>
+  <div class="col-md-6">
+    <h1>{{ product[1] }}</h1>
+    <p class="lead">{{ product[2] }}</p>
+    <h3 class="text-primary">¥{{ "{:,}".format(product[3]|int) }}</h3>
+    <p>在庫: {{ product[4] }}個</p>
+    <p>カテゴリ: {{ product[5] }}</p>
+
+    {% if session.user_id %}
+    <form action="/cart/add" method="POST" class="mb-3">
+      <input type="hidden" name="product_id" value="{{ product[0] }}" />
+      <div class="row">
+        <div class="col-md-4">
+          <input
+            type="number"
+            name="quantity"
+            value="1"
+            min="1"
+            max="{{ product[4] }}"
+            class="form-control"
+          />
+        </div>
+        <div class="col-md-8">
+          <button type="submit" class="btn btn-primary">カートに追加</button>
+        </div>
+      </div>
+    </form>
+    {% else %}
+    <p><a href="/login" class="btn btn-primary">ログインして購入</a></p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row mt-5">
+  <div class="col-12">
+    <h3>レビュー</h3>
+
+    {% if session.user_id %}
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5>レビューを投稿</h5>
+        <form action="/product/{{ product[0] }}/review" method="POST">
+          <div class="mb-3">
+            <label for="rating" class="form-label">評価</label>
+            <select name="rating" id="rating" class="form-select" required>
+              <option value="5">5点</option>
+              <option value="4">4点</option>
+              <option value="3">3点</option>
+              <option value="2">2点</option>
+              <option value="1">1点</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="comment" class="form-label">コメント</label>
+            <textarea
+              name="comment"
+              id="comment"
+              class="form-control"
+              rows="3"
+              required
+            ></textarea>
+          </div>
+          <button type="submit" class="btn btn-secondary">レビュー投稿</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="reviews-list">
+      {% for review in reviews %}
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <h6>{{ review[5] }}</h6>
+            <div>
+              <span class="text-warning">⭐ {{ review[3] }}/5</span>
+              <small class="text-muted">{{ review[6] }}</small>
+            </div>
+          </div>
+          <div class="review-content">
+            {{ review[4] | safe }}
+            <!-- XSS脆弱性 -->
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

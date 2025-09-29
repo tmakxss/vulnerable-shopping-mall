@@ -1,0 +1,55 @@
+{% extends "base.html" %} {% block title %}お問い合わせ
+-脆弱なショッピングモール{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header">
+          <h3>お問い合わせ</h3>
+        </div>
+        <div class="card-body">
+          <form method="post">
+            <div class="mb-3">
+              <label for="title" class="form-label">件名</label>
+              <input
+                type="text"
+                class="form-control"
+                id="title"
+                name="title"
+                required
+              />
+            </div>
+            <div class="mb-3">
+              <label for="email" class="form-label"
+                >メールアドレス (BCC含む)</label
+              >
+              <input
+                type="text"
+                class="form-control"
+                id="email"
+                name="email"
+                placeholder="example@email.com"
+                required
+              />
+              <div class="form-text">
+                複数のメールアドレスをカンマで区切って入力できます（最初のアドレスがメイン、残りはBCC）
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="content" class="form-label">内容</label>
+              <textarea
+                class="form-control"
+                id="content"
+                name="content"
+                rows="5"
+                required
+              ></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">送信</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

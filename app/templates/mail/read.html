@@ -1,0 +1,51 @@
+{% extends "base.html" %} {% block title %}メール詳細 -
+脆弱なショッピングモール{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header">
+          <h3>{{ email[3] }}</h3>
+          <small class="text-muted">
+            送信者: {{ email[8] }} | 受信日時: {{ email[6] }}
+          </small>
+        </div>
+        <div class="card-body">
+          <div class="mb-4">{{ email[4]|safe }}</div>
+
+          {% if attachments %}
+          <hr />
+          <h5>📎 添付ファイル</h5>
+          <div class="list-group">
+            {% for attachment in attachments %}
+            <div
+              class="list-group-item d-flex justify-content-between align-items-center"
+            >
+              <div>
+                <strong>{{ attachment[2] }}</strong>
+                <small class="text-muted"
+                  >({{ attachment[5]|filesizeformat }})</small
+                >
+              </div>
+              <a
+                href="/mail/attachment/{{ attachment[0] }}"
+                class="btn btn-sm btn-outline-primary"
+              >
+                📥 ダウンロード
+              </a>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <a href="/mail/inbox" class="btn btn-secondary">← 受信メールボックス</a>
+        <a href="/mail/sent" class="btn btn-secondary">← 送信メールボックス</a>
+        <a href="/mail/compose" class="btn btn-primary">✏️ 新規メール</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

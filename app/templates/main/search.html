@@ -1,0 +1,129 @@
+{% extends "base.html" %} {% block title %}商品検索 - 脆弱なショッピングモール{%
+endblock %} {% block content %}
+<div class="row">
+  <div class="col-md-12">
+    <h2>商品検索</h2>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <form method="GET" action="/search">
+          <div class="input-group">
+            <input
+              type="text"
+              class="form-control"
+              name="q"
+              placeholder="商品名や説明を入力..."
+              value="{{ query if query else '' }}"
+            />
+            <button class="btn btn-primary" type="submit">検索</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {% if query %}
+    <div class="alert alert-info">
+      <strong>検索結果:</strong> "{{ query }}" で検索しました {% if
+      total_results is defined %}
+      <span class="badge bg-light text-dark ms-2">全{{ total_results }}件</span>
+      {% endif %}
+    </div>
+    {% endif %} {% if results %}
+    <div class="row">
+      {% for product in results %}
+      <div class="col-md-4 mb-4">
+        <div class="card h-100">
+          <img
+            src="{{ product[6] }}"
+            class="card-img-top"
+            alt="{{ product[1] }}"
+            style="height: 200px; object-fit: cover"
+          />
+          <div class="card-body">
+            <h5 class="card-title">{{ product[1] }}</h5>
+            <p class="card-text">{{ product[2] }}</p>
+            <p class="card-text">
+              <strong>¥{{ "{:,}".format(product[3]|int) }}</strong>
+            </p>
+            <p class="card-text">
+              <small class="text-muted">在庫: {{ product[4] }}個</small>
+            </p>
+            <a href="/product/{{ product[0] }}" class="btn btn-primary"
+              >詳細を見る</a
+            >
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- ページング -->
+    {% if total_pages > 1 %}
+    <nav aria-label="検索結果ページング" class="mt-4">
+      <ul class="pagination justify-content-center">
+        <!-- 前のページ -->
+        {% if current_page > 1 %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="?q={{ query }}&page={{ current_page - 1 }}"
+          >
+            &laquo; 前へ
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <span class="page-link">&laquo; 前へ</span>
+        </li>
+        {% endif %}
+
+        <!-- ページ番号 -->
+        {% for page_num in range(1, total_pages + 1) %} {% if page_num ==
+        current_page %}
+        <li class="page-item active">
+          <span class="page-link">{{ page_num }}</span>
+        </li>
+        {% elif page_num <= 3 or page_num > total_pages - 3 or (page_num >=
+        current_page - 1 and page_num <= current_page + 1) %}
+        <li class="page-item">
+          <a class="page-link" href="?q={{ query }}&page={{ page_num }}">
+            {{ page_num }}
+          </a>
+        </li>
+        {% elif page_num == 4 and current_page > 6 %}
+        <li class="page-item disabled">
+          <span class="page-link">...</span>
+        </li>
+        {% elif page_num == total_pages - 3 and current_page < total_pages - 5
+        %}
+        <li class="page-item disabled">
+          <span class="page-link">...</span>
+        </li>
+        {% endif %} {% endfor %}
+
+        <!-- 次のページ -->
+        {% if current_page < total_pages %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="?q={{ query }}&page={{ current_page + 1 }}"
+          >
+            次へ &raquo;
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <span class="page-link">次へ &raquo;</span>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %} {% elif query %}
+    <div class="text-center py-5">
+      <h4>検索結果が見つかりません</h4>
+      <p>別のキーワードで検索してみてください。</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

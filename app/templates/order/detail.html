@@ -1,0 +1,85 @@
+{% extends "base.html" %} {% block title %}注文詳細 - 脆弱なショッピングモール{%
+endblock %} {% block content %}
+<div class="row">
+  <div class="col-12 col-lg-10 mx-auto">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h3 class="mb-0">🧾 注文詳細</h3>
+      </div>
+      <div class="card-body">
+        {% if order %}
+        <div class="row mb-3">
+          <div class="col-md-3"><strong>注文番号:</strong></div>
+          <div class="col-md-9">#{{ order[0] }}</div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-3"><strong>注文日:</strong></div>
+          <div class="col-md-9">{{ order[7] if order[7] else '不明' }}</div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-3"><strong>配送先:</strong></div>
+          <div class="col-md-9">{{ order[2] }}</div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-3"><strong>支払い方法:</strong></div>
+          <div class="col-md-9">{{ order[3] }}</div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-3"><strong>合計金額:</strong></div>
+          <div class="col-md-9">¥{{ "{:,}".format(order[4]|int) }}</div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-3"><strong>ステータス:</strong></div>
+          <div class="col-md-9">
+            {% if order[5] == 'pending' %}
+            <span class="badge bg-warning text-dark">処理中</span>
+            {% elif order[5] == 'shipped' %}
+            <span class="badge bg-primary">発送済み</span>
+            {% elif order[5] == 'delivered' %}
+            <span class="badge bg-success">配達済み</span>
+            {% elif order[5] == 'cancelled' %}
+            <span class="badge bg-danger">キャンセル</span>
+            {% else %}
+            <span class="badge bg-secondary">{{ order[5] }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <hr />
+        <h5>🛒 注文商品</h5>
+        {% if items %}
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <thead class="table-light">
+              <tr>
+                <th>商品名</th>
+                <th>単価</th>
+                <th>数量</th>
+                <th>小計</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in items %}
+              <tr>
+                <td>{{ item[5] }}</td>
+                <td>¥{{ "{:,}".format(item[6]|int) }}</td>
+                <td>{{ item[3] }}</td>
+                <td>¥{{ "{:,}".format((item[3]*item[6])|int) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">注文商品が見つかりません。</div>
+        {% endif %} {% else %}
+        <div class="alert alert-danger">注文情報が見つかりません。</div>
+        {% endif %}
+        <div class="mt-4">
+          <a href="/orders" class="btn btn-secondary">← 注文履歴に戻る</a>
+          <a href="/" class="btn btn-primary">🏠 ホーム</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

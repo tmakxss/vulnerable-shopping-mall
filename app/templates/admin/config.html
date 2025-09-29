@@ -1,0 +1,43 @@
+{% extends "base.html" %} {% block title %}設定表示{% endblock %} {% block
+content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>設定表示</h1>
+    <a href="/admin" class="btn btn-secondary">
+      <i class="bi bi-arrow-left"></i> ダッシュボードに戻る
+    </a>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header">
+          <h5>システム設定</h5>
+        </div>
+        <div class="card-body">
+          <table class="table">
+            <tbody>
+              <tr>
+                <th>データベースパス</th>
+                <td>{{ config.database_path }}</td>
+              </tr>
+              <tr>
+                <th>管理者パスワード</th>
+                <td>{{ config.admin_password }}</td>
+              </tr>
+              <tr>
+                <th>シークレットキー</th>
+                <td>{{ config.secret_key }}</td>
+              </tr>
+              <tr>
+                <th>デバッグモード</th>
+                <td>{% if config.debug_mode %}有効{% else %}無効{% endif %}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

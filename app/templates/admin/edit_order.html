@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}注文編集{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h1>注文編集</h1>
+  
+  <div class="row">
+    <div class="col-md-8">
+      <form method="POST">
+        <div class="mb-3">
+          <label for="order_id" class="form-label">注文ID</label>
+          <input type="text" class="form-control" id="order_id" value="{{ order[0] }}" readonly>
+        </div>
+        
+        <div class="mb-3">
+          <label for="username" class="form-label">ユーザー名</label>
+          <input type="text" class="form-control" id="username" value="{{ order[8] }}" readonly>
+        </div>
+        
+        <div class="mb-3">
+          <label for="shipping_address" class="form-label">配送先</label>
+          <textarea class="form-control" id="shipping_address" name="shipping_address" rows="3" required>{{ order[2] }}</textarea>
+        </div>
+        
+        <div class="mb-3">
+          <label for="payment_method" class="form-label">支払い方法</label>
+          <select class="form-control" id="payment_method" name="payment_method" required>
+            <option value="credit_card" {% if order[3] == 'credit_card' %}selected{% endif %}>クレジットカード</option>
+            <option value="bank_transfer" {% if order[3] == 'bank_transfer' %}selected{% endif %}>銀行振込</option>
+            <option value="cash_on_delivery" {% if order[3] == 'cash_on_delivery' %}selected{% endif %}>代金引換</option>
+            <option value="paypal" {% if order[3] == 'paypal' %}selected{% endif %}>PayPal</option>
+          </select>
+        </div>
+        
+        <div class="mb-3">
+          <label for="total_amount" class="form-label">合計金額</label>
+          <input type="number" class="form-control" id="total_amount" name="total_amount" value="{{ order[4] }}" required>
+        </div>
+        
+        <div class="mb-3">
+          <label for="status" class="form-label">ステータス</label>
+          <select class="form-control" id="status" name="status" required>
+            <option value="pending" {% if order[5] == 'pending' %}selected{% endif %}>保留中</option>
+            <option value="processing" {% if order[5] == 'processing' %}selected{% endif %}>処理中</option>
+            <option value="shipped" {% if order[5] == 'shipped' %}selected{% endif %}>発送済み</option>
+            <option value="delivered" {% if order[5] == 'delivered' %}selected{% endif %}>配達済み</option>
+            <option value="completed" {% if order[5] == 'completed' %}selected{% endif %}>完了</option>
+            <option value="cancelled" {% if order[5] == 'cancelled' %}selected{% endif %}>キャンセル</option>
+          </select>
+        </div>
+        
+        <div class="mb-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">更新</button>
+          <a href="/admin/orders" class="btn btn-secondary">キャンセル</a>
+          <a href="/admin/orders" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 注文一覧に戻る
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %} 

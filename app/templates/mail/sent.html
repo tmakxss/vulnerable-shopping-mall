@@ -1,0 +1,68 @@
+{% extends "base.html" %} {% block title %}送信メールボックス -
+脆弱なショッピングモール{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card">
+        <div
+          class="card-header d-flex justify-content-between align-items-center"
+        >
+          <h3>📤 送信メールボックス</h3>
+          <a href="/mail/compose" class="btn btn-primary">✏️ 新規メール</a>
+        </div>
+        <div class="card-body">
+          {% if emails %}
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead class="table-dark">
+                <tr>
+                  <th>受信者</th>
+                  <th>件名</th>
+                  <th>添付ファイル</th>
+                  <th>送信日時</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for email in emails %}
+                <tr>
+                  <td>{{ email[8] }}</td>
+                  <td>
+                    <a
+                      href="/mail/read/{{ email[0] }}"
+                      class="text-decoration-none"
+                    >
+                      {{ email[3] }} {% if email[8] > 0 %} 📎 {% endif %}
+                    </a>
+                  </td>
+                  <td>
+                    {% if email[8] > 0 %}
+                    <span class="badge bg-info">{{ email[8] }}個</span>
+                    {% else %} - {% endif %}
+                  </td>
+                  <td>{{ email[6] }}</td>
+                  <td>
+                    <a
+                      href="/mail/read/{{ email[0] }}"
+                      class="btn btn-sm btn-outline-primary"
+                      >👁️ 詳細</a
+                    >
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="text-center py-5">
+            <h4>📭 送信メールがありません</h4>
+            <p class="text-muted">まだメールを送信していません。</p>
+            <a href="/mail/compose" class="btn btn-primary">✏️ メール作成</a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}商品編集{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h1>商品編集</h1>
+  
+  <div class="row">
+    <div class="col-md-8">
+      <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+          <label for="name" class="form-label">商品名</label>
+          <input type="text" class="form-control" id="name" name="name" value="{{ product[1] }}" required>
+        </div>
+        
+        <div class="mb-3">
+          <label for="description" class="form-label">説明</label>
+          <textarea class="form-control" id="description" name="description" rows="3" required>{{ product[2] }}</textarea>
+        </div>
+        
+        <div class="mb-3">
+          <label for="price" class="form-label">価格</label>
+          <input type="number" class="form-control" id="price" name="price" value="{{ product[3] }}" required>
+        </div>
+        
+        <div class="mb-3">
+          <label for="stock" class="form-label">在庫数</label>
+          <input type="number" class="form-control" id="stock" name="stock" value="{{ product[4] }}" required>
+        </div>
+        
+        <div class="mb-3">
+          <label for="category" class="form-label">カテゴリ</label>
+          <select class="form-control" id="category" name="category" required>
+            <option value="electronics" {% if product[5] == 'electronics' %}selected{% endif %}>電子機器</option>
+            <option value="clothing" {% if product[5] == 'clothing' %}selected{% endif %}>衣類</option>
+            <option value="books" {% if product[5] == 'books' %}selected{% endif %}>書籍</option>
+            <option value="home" {% if product[5] == 'home' %}selected{% endif %}>家庭用品</option>
+            <option value="sports" {% if product[5] == 'sports' %}selected{% endif %}>スポーツ</option>
+          </select>
+        </div>
+        
+        <div class="mb-3">
+          <label for="image" class="form-label">画像</label>
+          {% if product[6] %}
+          <div class="mb-2">
+            <img src="{{ product[6] }}" alt="現在の画像" style="width: 100px; height: 100px; object-fit: cover;">
+            <p class="text-muted">現在の画像</p>
+          </div>
+          {% endif %}
+          <input type="file" class="form-control" id="image" name="image" accept="image/*">
+          <small class="form-text text-muted">新しい画像を選択すると現在の画像が置き換えられます</small>
+        </div>
+        
+        <div class="mb-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">更新</button>
+          <a href="/admin/products" class="btn btn-secondary">キャンセル</a>
+          <a href="/admin/products" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 商品一覧に戻る
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %} 
