@@ -400,17 +400,51 @@ def create_app():
         
     except ImportError as e:
         print(f"❌ ブループリント登録エラー: {e}")
+        import traceback
+        traceback.print_exc()
         
-        # フォールバック: 基本的なルートのみ
+        # 緊急フォールバック: 直接メインページ実装
         @app.route('/')
-        def fallback_index():
-            return jsonify({
-                'message': '🔒 脆弱なショッピングモール - ウェブセキュリティ演習サイト',
-                'status': 'running (fallback mode)',
-                'note': '⚠️ このサイトは学習目的のみで使用してください',
-                'error': 'Some modules failed to load',
-                'debug': 'テンプレートまたはデータベース接続の問題が発生しました'
-            })
+        def emergency_index():
+            try:
+                from app.database import db_config
+                from flask import render_template
+                
+                # 人気商品を取得
+                featured_products = db_config.execute_query(
+                    "SELECT * FROM products ORDER BY id DESC LIMIT 4"
+                )
+                
+                # 最新レビューを取得
+                recent_reviews = db_config.execute_query("""
+                    SELECT r.*, u.username, p.name as product_name, p.image_url 
+                    FROM reviews r 
+                    JOIN users u ON r.user_id = u.id 
+                    JOIN products p ON r.product_id = p.id 
+                    ORDER BY r.created_at DESC LIMIT 10
+                """)
+                
+                # HTMLテンプレートを試行
+                return render_template('main/index.html', 
+                                     featured_products=featured_products or [], 
+                                     recent_reviews=recent_reviews or [],
+                                     review_query='')
+                                     
+            except Exception as template_error:
+                print(f"❌ 緊急フォールバックエラー: {template_error}")
+                import traceback
+                traceback.print_exc()
+                
+                # 最終フォールバック（JSONレスポンス）
+                return jsonify({
+                    'message': '🔒 脆弱なショッピングモール - ウェブセキュリティ演習サイト',
+                    'status': 'running',
+                    'mode': 'JSON API (テンプレートフォールバック)',
+                    'note': '⚠️ このサイトは学習目的のみで使用してください',
+                    'featured_products': featured_products or [],
+                    'recent_reviews': recent_reviews or [],
+                    'review_query': ''
+                })
     
     # 環境変数とSupabase設定確認
     @app.route('/api/config-check')
