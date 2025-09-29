@@ -393,6 +393,16 @@ def create_app():
                 "SELECT * FROM products ORDER BY id DESC LIMIT 4"
             ) or []
             
+            # 商品データがない場合、デモ用のサンプルデータを使用
+            if not featured_products:
+                print("🔄 メインページ: 商品データが見つからないため、サンプル表示")
+                featured_products = [
+                    (1, 'MacBook Air M3', 'Ultra-thin laptop with M3 chip', 199999.0, 5, 'electronics', 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=400&h=300&fit=crop', '2025-09-29'),
+                    (2, 'AirPods Pro', 'Premium wireless earbuds', 39999.0, 10, 'electronics', 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=400&h=300&fit=crop', '2025-09-29'),
+                    (3, 'Nike Air Max', 'Comfortable running shoes', 15999.0, 15, 'fashion', 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=300&fit=crop', '2025-09-29'),
+                    (4, 'Sony Camera', 'Professional digital camera', 89999.0, 3, 'electronics', 'https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=400&h=300&fit=crop', '2025-09-29')
+                ]
+            
             # 商品カードHTML生成
             product_cards = ""
             for p in featured_products[:4]:
@@ -638,10 +648,62 @@ def create_app():
             
             products = db_config.execute_query(query, params) or []
             
+            # 商品データがない場合、サンプルデータを作成
+            if not products:
+                print("🔄 商品データが見つからないため、サンプルデータを作成中...")
+                sample_products = [
+                    ('MacBook Air M3', 'Ultra-thin laptop with M3 chip', 199999.0, 5, 'electronics', '/static/uploads/macbook.jpg'),
+                    ('AirPods Pro', 'Premium wireless earbuds', 39999.0, 10, 'electronics', '/static/uploads/airpods.jpg'),
+                    ('Nike Air Max', 'Comfortable running shoes', 15999.0, 15, 'fashion', '/static/uploads/nike.jpg'),
+                    ('Sony Camera', 'Professional digital camera', 89999.0, 3, 'electronics', '/static/uploads/camera.jpg'),
+                    ('デスクチェア', '人間工学に基づいたオフィスチェア', 45999.0, 8, 'furniture', '/static/uploads/chair.jpg'),
+                    ('スマートウォッチ', 'フィットネス追跡機能付き', 29999.0, 12, 'electronics', '/static/uploads/watch.jpg')
+                ]
+                
+                try:
+                    # テーブル作成を試行
+                    db_config.execute_update("""
+                        CREATE TABLE IF NOT EXISTS products (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name TEXT NOT NULL,
+                            description TEXT,
+                            price REAL NOT NULL,
+                            stock INTEGER DEFAULT 0,
+                            category TEXT,
+                            image_url TEXT,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    
+                    # サンプルデータ挿入
+                    for product_data in sample_products:
+                        db_config.execute_update(
+                            "INSERT OR IGNORE INTO products (name, description, price, stock, category, image_url) VALUES (?, ?, ?, ?, ?, ?)",
+                            product_data
+                        )
+                    
+                    # 再度商品データを取得
+                    products = db_config.execute_query(query, params) or []
+                    print(f"✅ サンプルデータ作成完了: {len(products)}件の商品")
+                    
+                except Exception as sample_error:
+                    print(f"❌ サンプルデータ作成エラー: {sample_error}")
+                    # ハードコードされたフォールバックデータ
+                    products = [
+                        (1, 'MacBook Air M3', 'Ultra-thin laptop with M3 chip', 199999.0, 5, 'electronics', '/static/uploads/macbook.jpg', '2025-09-29'),
+                        (2, 'AirPods Pro', 'Premium wireless earbuds', 39999.0, 10, 'electronics', '/static/uploads/airpods.jpg', '2025-09-29'),
+                        (3, 'Nike Air Max', 'Comfortable running shoes', 15999.0, 15, 'fashion', '/static/uploads/nike.jpg', '2025-09-29'),
+                        (4, 'Sony Camera', 'Professional digital camera', 89999.0, 3, 'electronics', '/static/uploads/camera.jpg', '2025-09-29')
+                    ]
+            
             # カテゴリ一覧取得
             categories = db_config.execute_query(
                 "SELECT DISTINCT category FROM products WHERE category IS NOT NULL ORDER BY category"
             ) or []
+            
+            # カテゴリデータがない場合のフォールバック
+            if not categories and products:
+                categories = [('electronics',), ('fashion',), ('furniture',)]
             
             # 商品カード生成
             product_cards = ""
@@ -749,7 +811,7 @@ def create_app():
             {product_cards}
         </div>
         
-        {('<div class="text-center mt-5"><p class="text-muted">該当する商品が見つかりませんでした。</p></div>' if not products else '')}
+        {('<div class="text-center mt-5"><div class="alert alert-info"><h5>商品データがありません</h5><p>データベースを初期化してサンプル商品を追加してください。</p><a href="/api/create-tables" class="btn btn-warning me-2">テーブル作成</a><a href="/api/seed-data" class="btn btn-success">サンプルデータ追加</a><a href="/products" class="btn btn-primary ms-2">再読み込み</a></div></div>' if not products else '')}
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
