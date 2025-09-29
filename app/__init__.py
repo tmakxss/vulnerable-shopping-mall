@@ -58,16 +58,46 @@ def create_app():
     def api_products():
         try:
             from app.database import db_config
+            
+            # 接続状況をログ出力
+            print(f"🔍 PostgreSQL使用: {db_config.use_postgres}")
+            print(f"🔍 DATABASE_URL設定済み: {bool(os.getenv('DATABASE_URL'))}")
+            
+            # まずテーブルの存在確認
+            table_check = db_config.execute_query("""
+                SELECT table_name FROM information_schema.tables 
+                WHERE table_schema = 'public' AND table_name = 'products'
+            """)
+            
+            if not table_check:
+                return jsonify({
+                    'success': False,
+                    'error': 'products table not found',
+                    'debug': 'テーブルが作成されていません'
+                })
+            
+            # 商品数をカウント
+            count_result = db_config.execute_query("SELECT COUNT(*) as count FROM products")
+            product_count = count_result[0]['count'] if count_result else 0
+            
+            # 商品データを取得
             products = db_config.execute_query("SELECT * FROM products LIMIT 10")
+            
             return jsonify({
                 'success': True,
-                'count': len(products),
-                'products': products
+                'table_exists': True,
+                'total_products': product_count,
+                'fetched_count': len(products),
+                'products': products,
+                'connection_type': 'PostgreSQL' if db_config.use_postgres else 'SQLite'
             })
+            
         except Exception as e:
+            print(f"❌ API商品取得エラー: {e}")
             return jsonify({
                 'success': False,
-                'error': str(e)
+                'error': str(e),
+                'error_type': type(e).__name__
             }), 500
     
     # ユーザーデータ直接取得エンドポイント  
@@ -75,12 +105,64 @@ def create_app():
     def api_users():
         try:
             from app.database import db_config
+            
+            # テーブル存在確認
+            table_check = db_config.execute_query("""
+                SELECT table_name FROM information_schema.tables 
+                WHERE table_schema = 'public' AND table_name = 'users'
+            """)
+            
+            if not table_check:
+                return jsonify({
+                    'success': False,
+                    'error': 'users table not found',
+                    'debug': 'ユーザーテーブルが作成されていません'
+                })
+            
+            # ユーザー数をカウント
+            count_result = db_config.execute_query("SELECT COUNT(*) as count FROM users")
+            user_count = count_result[0]['count'] if count_result else 0
+            
+            # ユーザーデータを取得
             users = db_config.execute_query("SELECT id, username, email, is_admin FROM users")
+            
             return jsonify({
                 'success': True,
-                'count': len(users),
+                'table_exists': True,
+                'total_users': user_count,
+                'fetched_count': len(users),
                 'users': users
             })
+            
+        except Exception as e:
+            print(f"❌ APIユーザー取得エラー: {e}")
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'error_type': type(e).__name__
+            }), 500
+    
+    # 全テーブル一覧確認エンドポイント
+    @app.route('/api/tables')
+    def api_tables():
+        try:
+            from app.database import db_config
+            
+            tables = db_config.execute_query("""
+                SELECT table_name, 
+                       (SELECT COUNT(*) FROM information_schema.columns 
+                        WHERE table_name = t.table_name AND table_schema = 'public') as column_count
+                FROM information_schema.tables t
+                WHERE table_schema = 'public'
+                ORDER BY table_name
+            """)
+            
+            return jsonify({
+                'success': True,
+                'database_type': 'PostgreSQL' if db_config.use_postgres else 'SQLite',
+                'tables': tables
+            })
+            
         except Exception as e:
             return jsonify({
                 'success': False,
