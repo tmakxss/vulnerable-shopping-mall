@@ -33,14 +33,24 @@ class DatabaseConfig:
         """データベース接続を取得"""
         try:
             if self.use_postgres and self.database_url:
+                print(f"🔍 DATABASE_URL接続試行: {self.database_url[:50]}...")
+                
                 # PostgreSQL/Supabase接続
                 conn = psycopg2.connect(
                     self.database_url,
                     cursor_factory=RealDictCursor
                 )
-                print("✅ PostgreSQL接続成功")
+                
+                # 接続テスト
+                cursor = conn.cursor()
+                cursor.execute("SELECT current_database(), current_schema(), version()")
+                result = cursor.fetchone()
+                print(f"✅ PostgreSQL接続成功: DB={result[0]}, Schema={result[1]}")
+                
                 return conn
             else:
+                print("⚠️ DATABASE_URLが設定されていません、SQLiteを使用")
+                
                 # ローカル開発用のSQLite（本番環境でも環境変数がない場合のフォールバック）
                 import os
                 db_path = os.path.join(os.path.dirname(__file__), '..', 'database', 'shop.db')
@@ -52,16 +62,31 @@ class DatabaseConfig:
                 conn.row_factory = sqlite3.Row  # 辞書形式でアクセス
                 print("✅ SQLite接続成功（フォールバック）")
                 return conn
-        except Exception as e:
-            print(f"❌ データベース接続エラー: {e}")
-            # 最終フォールバック：メモリ内SQLite
+                
+        except psycopg2.Error as e:
+            print(f"❌ PostgreSQL接続エラー: {e}")
+            print("⚠️ SQLiteにフォールバック")
+            
+            # PostgreSQL接続失敗時はSQLiteにフォールバック
             try:
+                import os
+                db_path = os.path.join(os.path.dirname(__file__), '..', 'database', 'shop.db')
+                os.makedirs(os.path.dirname(db_path), exist_ok=True)
+                
+                conn = sqlite3.connect(db_path)
+                conn.row_factory = sqlite3.Row
+                print("✅ SQLiteフォールバック接続成功")
+                return conn
+            except:
+                # 最終フォールバック：メモリ内SQLite
                 conn = sqlite3.connect(':memory:')
                 conn.row_factory = sqlite3.Row
                 print("⚠️ メモリ内SQLite使用（一時的）")
                 return conn
-            except:
-                return None
+                
+        except Exception as e:
+            print(f"❌ 一般的なデータベース接続エラー: {e}")
+            return None
     
     def get_supabase_client(self):
         """Supabaseクライアントを取得"""
