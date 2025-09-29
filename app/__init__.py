@@ -381,105 +381,223 @@ def create_app():
                 'message': str(error)
             }), 500
     
-    # 最優先: メインページルート（ブループリント登録前に定義）
+    # 最優先: メインページルート（確実にHTMLを返す）
     @app.route('/')
     def main_index():
-        """メインページ - ショッピングモールのトップページ"""
+        """メインページ - ショッピングモールのトップページ（HTML直接出力）"""
         try:
             from app.database import db_config
-            from flask import render_template
-            
-            print("🔄 メインページ表示処理開始...")
             
             # 人気商品を取得
             featured_products = db_config.execute_query(
                 "SELECT * FROM products ORDER BY id DESC LIMIT 4"
             ) or []
             
-            print(f"📦 取得商品数: {len(featured_products)}")
+            # 商品カードHTML生成
+            product_cards = ""
+            for p in featured_products[:4]:
+                try:
+                    name = p[1] if len(p) > 1 else "商品名"
+                    price = f"{p[3]:,.0f}" if len(p) > 3 else "価格未設定"
+                    description = p[2][:50] + "..." if len(p) > 2 and p[2] else ""
+                    
+                    product_cards += f'''
+                    <div class="col-md-3 col-sm-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">{name}</h6>
+                                <p class="card-text"><strong>¥{price}</strong></p>
+                                <p class="card-text text-muted small">{description}</p>
+                                <a href="/products" class="btn btn-primary btn-sm">詳細を見る</a>
+                            </div>
+                        </div>
+                    </div>
+                    '''
+                except Exception as card_error:
+                    print(f"商品カード生成エラー: {card_error}")
+                    continue
             
-            # 最新レビューを取得
-            recent_reviews = db_config.execute_query("""
-                SELECT r.*, u.username, p.name as product_name, p.image_url 
-                FROM reviews r 
-                JOIN users u ON r.user_id = u.id 
-                JOIN products p ON r.product_id = p.id 
-                ORDER BY r.created_at DESC LIMIT 10
-            """) or []
-            
-            print(f"💬 取得レビュー数: {len(recent_reviews)}")
-            
-            # HTMLテンプレートでレンダリング
-            print("🎨 HTMLテンプレート使用")
-            return render_template('main/index.html', 
-                                 featured_products=featured_products, 
-                                 recent_reviews=recent_reviews,
-                                 review_query='')
-                                 
-        except Exception as e:
-            print(f"❌ メインページエラー: {e}")
-            import traceback
-            traceback.print_exc()
-            
-            # 最後のフォールバック: 基本HTML直接出力
-            featured_products = []
-            try:
-                from app.database import db_config
-                featured_products = db_config.execute_query(
-                    "SELECT * FROM products ORDER BY id DESC LIMIT 4"
-                ) or []
-            except:
-                pass
-            
-            return f'''<!DOCTYPE html>
+            # 完全なHTMLページを生成
+            html_content = f'''<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🔒 脆弱なショッピングモール</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        .hero-section {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4rem 0;
+        }}
+        .product-card {{
+            transition: transform 0.2s;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }}
+        .product-card:hover {{
+            transform: translateY(-5px);
+        }}
+        .navbar {{
+            background: #2c3e50 !important;
+        }}
+        .navbar-brand {{
+            font-weight: bold;
+            color: #ecf0f1 !important;
+        }}
+    </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <div class="text-center py-5">
-            <h1 class="display-5 fw-bold mb-3">🔒 脆弱なショッピングモール</h1>
-            <p class="lead text-muted mb-4">ウェブセキュリティ演習用のショッピングサイトです</p>
-            <p class="text-warning">⚠️ このサイトは学習目的のみで使用してください</p>
-        </div>
-        
-        <div class="row mt-5">
-            <div class="col-md-12">
-                <h4 class="mb-4">人気商品 ({len(featured_products)}件)</h4>
-                <div class="row">
-                    {"".join([f'''
-                    <div class="col-md-3 mb-4">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="card-title">{p[1] if len(p) > 1 else "商品名"}</h6>
-                                <p class="card-text">¥{p[3]:,.0f}</p>
-                                <p class="card-text text-muted">{p[2] if len(p) > 2 else ""}</p>
-                            </div>
-                        </div>
-                    </div>
-                    ''' for p in featured_products[:4]])}
-                </div>
-            </div>
-        </div>
-        
-        <div class="row mt-4">
-            <div class="col-md-12">
-                <h5>📍 機能へのアクセス</h5>
-                <ul class="list-group">
-                    <li class="list-group-item"><a href="/products">🛍️ 商品一覧</a></li>
-                    <li class="list-group-item"><a href="/auth/register">👤 新規登録</a></li>
-                    <li class="list-group-item"><a href="/auth/login">🔑 ログイン</a></li>
-                    <li class="list-group-item"><a href="/health">🔧 ヘルスチェック</a></li>
+    <!-- ナビゲーションバー -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-shield-exclamation"></i>
+                脆弱なショッピングモール
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/products"><i class="bi bi-bag"></i> 商品</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/auth/login"><i class="bi bi-person"></i> ログイン</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/auth/register"><i class="bi bi-person-plus"></i> 新規登録</a>
+                    </li>
                 </ul>
             </div>
         </div>
+    </nav>
+
+    <!-- ヒーローセクション -->
+    <div class="hero-section text-center">
+        <div class="container">
+            <h1 class="display-4 fw-bold mb-3">
+                <i class="bi bi-shield-exclamation"></i>
+                脆弱なショッピングモール
+            </h1>
+            <p class="lead mb-4">ウェブセキュリティ演習用のショッピングサイトです</p>
+            <div class="alert alert-warning d-inline-block" role="alert">
+                <i class="bi bi-exclamation-triangle"></i>
+                <strong>注意:</strong> このサイトは学習目的のみで使用してください
+            </div>
+            <div class="mt-4">
+                <a href="/products" class="btn btn-light btn-lg me-3">
+                    <i class="bi bi-bag"></i> 商品を見る
+                </a>
+                <a href="/health" class="btn btn-outline-light btn-lg">
+                    <i class="bi bi-gear"></i> システム状態
+                </a>
+            </div>
+        </div>
     </div>
-    
+
+    <!-- メインコンテンツ -->
+    <div class="container my-5">
+        <!-- 人気商品セクション -->
+        <section class="mb-5">
+            <h2 class="text-center mb-4">
+                <i class="bi bi-star-fill text-warning"></i>
+                人気商品 ({len(featured_products)}件)
+            </h2>
+            <div class="row">
+                {product_cards}
+            </div>
+            {('<div class="text-center mt-4"><p class="text-muted">商品データを読み込み中...</p></div>' if not featured_products else '')}
+        </section>
+
+        <!-- 機能紹介セクション -->
+        <section class="mb-5">
+            <h3 class="text-center mb-4">
+                <i class="bi bi-list-check"></i>
+                利用可能な機能
+            </h3>
+            <div class="row">
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="bi bi-bag-check display-6 text-primary"></i>
+                            <h5 class="card-title mt-3">商品閲覧</h5>
+                            <p class="card-text">様々な商品を閲覧できます</p>
+                            <a href="/products" class="btn btn-primary">商品一覧</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="bi bi-person-plus display-6 text-success"></i>
+                            <h5 class="card-title mt-3">新規登録</h5>
+                            <p class="card-text">アカウントを作成できます</p>
+                            <a href="/auth/register" class="btn btn-success">登録</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="bi bi-key display-6 text-info"></i>
+                            <h5 class="card-title mt-3">ログイン</h5>
+                            <p class="card-text">既存アカウントでログイン</p>
+                            <a href="/auth/login" class="btn btn-info">ログイン</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="bi bi-gear display-6 text-secondary"></i>
+                            <h5 class="card-title mt-3">システム状態</h5>
+                            <p class="card-text">システム情報を確認</p>
+                            <a href="/health" class="btn btn-secondary">確認</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- フッター -->
+    <footer class="bg-dark text-light py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">
+                <i class="bi bi-shield-exclamation"></i>
+                脆弱なショッピングモール - ウェブセキュリティ学習サイト
+            </p>
+            <p class="text-muted small mt-2">学習目的のみでご使用ください</p>
+        </div>
+    </footer>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>'''
+            
+            return html_content
+            
+        except Exception as e:
+            # エラーが発生した場合の最小限のHTMLページ
+            return f'''<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>🔒 脆弱なショッピングモール</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5 text-center">
+        <h1>🔒 脆弱なショッピングモール</h1>
+        <p class="lead">ウェブセキュリティ演習サイト</p>
+        <div class="alert alert-warning">⚠️ このサイトは学習目的のみで使用してください</div>
+        <p>エラーが発生しました: {str(e)}</p>
+        <a href="/health" class="btn btn-primary">システム状態を確認</a>
+    </div>
 </body>
 </html>'''
 
