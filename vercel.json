@@ -1,10 +1,11 @@
 {
   "version": 2,
-  "functions": {
-    "run.py": {
-      "runtime": "@vercel/python"
+  "builds": [
+    {
+      "src": "run.py",
+      "use": "@vercel/python"
     }
-  },
+  ],
   "routes": [
     {
       "src": "/(.*)",
@@ -12,12 +13,6 @@
     }
   ],
   "env": {
-    "FLASK_ENV": "production",
-    "PYTHONPATH": "."
-  },
-  "build": {
-    "env": {
-      "FLASK_ENV": "production"
-    }
+    "FLASK_ENV": "production"
   }
 }
