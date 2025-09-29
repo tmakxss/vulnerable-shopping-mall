@@ -169,6 +169,98 @@ def create_app():
                 'error': str(e)
             }), 500
     
+    # 緊急用: テーブル作成エンドポイント
+    @app.route('/api/create-tables')
+    def create_tables():
+        try:
+            from app.database import db_config
+            
+            # ユーザーテーブル作成
+            db_config.execute_update("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    username VARCHAR(255) UNIQUE NOT NULL,
+                    password VARCHAR(255) NOT NULL,
+                    email VARCHAR(255),
+                    address TEXT,
+                    phone VARCHAR(255),
+                    is_admin BOOLEAN DEFAULT false,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # 商品テーブル作成
+            db_config.execute_update("""
+                CREATE TABLE IF NOT EXISTS products (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    price DECIMAL(10,2) NOT NULL,
+                    stock INTEGER DEFAULT 0,
+                    category VARCHAR(255),
+                    image_url TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # レビューテーブル作成
+            db_config.execute_update("""
+                CREATE TABLE IF NOT EXISTS reviews (
+                    id SERIAL PRIMARY KEY,
+                    product_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    rating INTEGER NOT NULL,
+                    comment TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (product_id) REFERENCES products (id),
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+            """)
+            
+            return jsonify({
+                'success': True,
+                'message': 'テーブル作成完了'
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    # 緊急用: 初期データ投入エンドポイント
+    @app.route('/api/seed-data')
+    def seed_data():
+        try:
+            from app.database import db_config
+            
+            # テストユーザー作成
+            db_config.execute_update("""
+                INSERT INTO users (username, password, email, is_admin) VALUES 
+                ('admin', 'admin123', 'admin@shop.com', true),
+                ('user1', 'password123', 'user1@test.com', false)
+                ON CONFLICT (username) DO NOTHING
+            """)
+            
+            # テスト商品作成
+            db_config.execute_update("""
+                INSERT INTO products (name, description, price, stock, category, image_url) VALUES 
+                ('ノートパソコン', '高性能ノートパソコンです', 120000.00, 10, '電子機器', 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=300&fit=crop'),
+                ('スマートフォン', '最新スマートフォンです', 80000.00, 15, '電子機器', 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=300&fit=crop'),
+                ('ヘッドフォン', '高音質ヘッドフォンです', 15000.00, 20, '電子機器', 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop')
+            """)
+            
+            return jsonify({
+                'success': True,
+                'message': '初期データ投入完了'
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
     # エラーハンドラー
     @app.errorhandler(500)
     def internal_error(error):
