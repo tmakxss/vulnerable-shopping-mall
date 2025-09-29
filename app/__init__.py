@@ -41,29 +41,47 @@ def create_app():
         try:
             from app.database import db_config
             
+            results = {}
+            
             # 基本接続テスト
-            result = db_config.execute_query("SELECT 1 as test")
+            try:
+                result = db_config.execute_query("SELECT 1 as test")
+                results['basic_query'] = {'success': True, 'result': result}
+            except Exception as e:
+                results['basic_query'] = {'success': False, 'error': str(e)}
             
-            # 接続情報を取得
-            db_info = db_config.execute_query("""
-                SELECT 
-                    current_database() as database_name,
-                    current_schema() as current_schema,
-                    session_user as session_user,
-                    current_user as current_user,
-                    version() as postgres_version
-            """)
+            # 個別のクエリで詳細情報を取得
+            queries = {
+                'current_database': "SELECT current_database()",
+                'current_schema': "SELECT current_schema()", 
+                'current_user': "SELECT current_user",
+                'session_user': "SELECT session_user",
+                'postgres_version': "SELECT version()"
+            }
             
-            # スキーマ検索パスを確認
-            search_path = db_config.execute_query("SHOW search_path")
+            for name, query in queries.items():
+                try:
+                    result = db_config.execute_query(query)
+                    results[name] = result[0] if result else None
+                except Exception as e:
+                    results[name] = f'ERROR: {str(e)}'
+            
+            # 権限チェック
+            try:
+                permission_test = db_config.execute_query("""
+                    SELECT 
+                        has_database_privilege(current_database(), 'CREATE') as can_create,
+                        has_schema_privilege('public', 'CREATE') as can_create_in_public
+                """)
+                results['permissions'] = permission_test[0] if permission_test else None
+            except Exception as e:
+                results['permissions'] = f'ERROR: {str(e)}'
             
             return jsonify({
                 'database_connection': 'Success',
                 'connection_type': 'PostgreSQL' if db_config.use_postgres else 'SQLite',
-                'test_query': result,
-                'database_info': db_info[0] if db_info else None,
-                'search_path': search_path[0] if search_path else None,
-                'database_url_configured': bool(os.getenv('DATABASE_URL'))
+                'database_url_configured': bool(os.getenv('DATABASE_URL')),
+                'detailed_results': results
             })
             
         except Exception as e:
@@ -215,8 +233,16 @@ def create_app():
             
             results = {}
             
+            # 接続テスト
+            try:
+                test_result = db_config.execute_query("SELECT 1 as test")
+                results['connection_test'] = f'SUCCESS: {test_result}'
+            except Exception as e:
+                results['connection_test'] = f'FAILED: {str(e)}'
+            
             # ユーザーテーブル作成
             try:
+                print("🔧 ユーザーテーブル作成中...")
                 result = db_config.execute_update("""
                     CREATE TABLE IF NOT EXISTS users (
                         id SERIAL PRIMARY KEY,
@@ -230,8 +256,11 @@ def create_app():
                     )
                 """)
                 results['users'] = 'SUCCESS' if result is not None else 'FAILED'
+                print(f"✅ ユーザーテーブル作成結果: {results['users']}")
             except Exception as e:
-                results['users'] = f'ERROR: {str(e)}'
+                error_msg = str(e)
+                results['users'] = f'ERROR: {error_msg}'
+                print(f"❌ ユーザーテーブル作成エラー: {error_msg}")
             
             # 商品テーブル作成
             try:
