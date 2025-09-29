@@ -601,11 +601,173 @@ def create_app():
 </body>
 </html>'''
 
+    # 追加ルート: 商品一覧ページ（mainブループリントから移植）
+    @app.route('/products')
+    def products_list():
+        """商品一覧ページ"""
+        try:
+            from app.database import db_config
+            from flask import request
+            
+            # カテゴリ、検索、ソート機能
+            category = request.args.get('category', '')
+            search = request.args.get('search', '')
+            sort = request.args.get('sort', 'id')
+            
+            # SQLクエリ構築
+            query = "SELECT * FROM products WHERE 1=1"
+            params = []
+            
+            if category:
+                query += " AND category = ?"
+                params.append(category)
+            
+            if search:
+                query += " AND (name LIKE ? OR description LIKE ?)"
+                params.extend([f'%{search}%', f'%{search}%'])
+            
+            # ソート順序
+            if sort == 'price_asc':
+                query += " ORDER BY price ASC"
+            elif sort == 'price_desc':
+                query += " ORDER BY price DESC"
+            elif sort == 'name':
+                query += " ORDER BY name ASC"
+            else:
+                query += " ORDER BY id DESC"
+            
+            products = db_config.execute_query(query, params) or []
+            
+            # カテゴリ一覧取得
+            categories = db_config.execute_query(
+                "SELECT DISTINCT category FROM products WHERE category IS NOT NULL ORDER BY category"
+            ) or []
+            
+            # 商品カード生成
+            product_cards = ""
+            for product in products:
+                try:
+                    name = product[1] if len(product) > 1 else "商品名"
+                    price = f"{product[3]:,.0f}" if len(product) > 3 else "価格未設定"
+                    description = product[2][:100] + "..." if len(product) > 2 and product[2] else ""
+                    image_url = product[6] if len(product) > 6 and product[6] else "/static/uploads/no-image.jpg"
+                    product_id = product[0] if len(product) > 0 else ""
+                    
+                    product_cards += f'''
+                    <div class="col-md-4 col-sm-6 mb-4">
+                        <div class="card product-card h-100">
+                            <img src="{image_url}" class="card-img-top" alt="{name}" style="height: 200px; object-fit: cover;">
+                            <div class="card-body d-flex flex-column">
+                                <h6 class="card-title">{name}</h6>
+                                <p class="card-text text-muted small">{description}</p>
+                                <div class="mt-auto">
+                                    <p class="product-price mb-3"><strong>¥{price}</strong></p>
+                                    <a href="/product/{product_id}" class="btn btn-primary btn-sm">詳細を見る</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    '''
+                except Exception as card_error:
+                    print(f"商品カード生成エラー: {card_error}")
+                    continue
+            
+            # カテゴリオプション生成
+            category_options = ""
+            for cat in categories:
+                cat_name = cat[0] if isinstance(cat, (list, tuple)) else cat
+                selected = "selected" if cat_name == category else ""
+                category_options += f'<option value="{cat_name}" {selected}>{cat_name}</option>'
+            
+            # HTMLページ生成
+            html_content = f'''<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品一覧 - 脆弱なショッピングモール</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        .product-card {{ transition: transform 0.2s; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        .product-card:hover {{ transform: translateY(-5px); }}
+        .navbar {{ background: #2c3e50 !important; }}
+    </style>
+</head>
+<body>
+    <!-- ナビゲーションバー -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="bi bi-shield-exclamation"></i> 脆弱なショッピングモール</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/"><i class="bi bi-house"></i> ホーム</a>
+                <a class="nav-link active" href="/products"><i class="bi bi-bag"></i> 商品</a>
+                <a class="nav-link" href="/auth/login"><i class="bi bi-person"></i> ログイン</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <h1 class="mb-4"><i class="bi bi-bag-check"></i> 商品一覧 ({len(products)}件)</h1>
+        
+        <!-- 検索・フィルター -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">検索</label>
+                        <input type="text" class="form-control" name="search" value="{search}" placeholder="商品名・説明で検索">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">カテゴリ</label>
+                        <select class="form-select" name="category">
+                            <option value="">全てのカテゴリ</option>
+                            {category_options}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">並び順</label>
+                        <select class="form-select" name="sort">
+                            <option value="id" {"selected" if sort == "id" else ""}>新着順</option>
+                            <option value="name" {"selected" if sort == "name" else ""}>名前順</option>
+                            <option value="price_asc" {"selected" if sort == "price_asc" else ""}>価格安い順</option>
+                            <option value="price_desc" {"selected" if sort == "price_desc" else ""}>価格高い順</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> 検索</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 商品一覧 -->
+        <div class="row">
+            {product_cards}
+        </div>
+        
+        {('<div class="text-center mt-5"><p class="text-muted">該当する商品が見つかりませんでした。</p></div>' if not products else '')}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>'''
+            
+            return html_content
+            
+        except Exception as e:
+            return f'''<!DOCTYPE html>
+<html><head><title>エラー</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
+<body><div class="container mt-5"><h1>商品一覧エラー</h1><p>エラー: {str(e)}</p><a href="/" class="btn btn-primary">ホームに戻る</a></div></body></html>'''
+
     # ブループリント登録
     try:
         from app.routes import main, auth, product, cart, order, review, admin, user, api, mail
         
-        # メインブループリント以外を登録（メインページは上で直接定義済み）
+        # 全ブループリント登録（メインページは重複しないよう注意）
         app.register_blueprint(auth.bp)
         app.register_blueprint(product.bp)
         app.register_blueprint(cart.bp)
@@ -616,7 +778,7 @@ def create_app():
         app.register_blueprint(api.bp)
         app.register_blueprint(mail.bp)
         
-        print("✅ ブループリント登録完了（mainページ除く）")
+        print("✅ 全ブループリント登録完了")
         
     except ImportError as e:
         print(f"❌ ブループリント登録エラー: {e}")
