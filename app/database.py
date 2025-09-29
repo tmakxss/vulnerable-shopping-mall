@@ -38,7 +38,7 @@ class DatabaseConfig:
             
         try:
             # 短いタイムアウトで接続テスト
-            conn = psycopg2.connect(self.database_url, connect_timeout=5)
+            conn = psycopg2.connect(self.database_url, connect_timeout=3)
             cursor = conn.cursor()
             cursor.execute("SELECT 1")
             cursor.close()
@@ -48,19 +48,115 @@ class DatabaseConfig:
         except Exception as e:
             print(f"❌ PostgreSQL接続失敗: {e}")
             print("🔄 SQLiteフォールバックモードを使用")
+            
+            # SQLiteデータベースの初期化
+            self._initialize_sqlite_fallback()
             return False
+    
+    def _initialize_sqlite_fallback(self):
+        """SQLiteフォールバックデータベースを初期化"""
+        try:
+            import sqlite3
+            import os
+            
+            # Vercelの一時ディレクトリを使用
+            db_path = '/tmp/fallback_shop.db'
+            
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # 基本テーブルを作成
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    email TEXT,
+                    role TEXT DEFAULT 'user',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS products (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    price REAL NOT NULL,
+                    description TEXT,
+                    image_url TEXT,
+                    category TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS reviews (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_id INTEGER,
+                    user_id INTEGER,
+                    rating INTEGER,
+                    comment TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (product_id) REFERENCES products (id),
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+            ''')
+            
+            # 管理者ユーザーを作成
+            cursor.execute("""
+                INSERT OR IGNORE INTO users (username, password, email, role) 
+                VALUES ('admin', 'admin123', 'admin@shop.com', 'admin')
+            """)
+            
+            # サンプル商品を追加
+            sample_products = [
+                ('iPhone 15 Pro', 149999.0, 'Latest iPhone with advanced features', '/static/uploads/iphone.jpg', 'electronics'),
+                ('MacBook Air M3', 199999.0, 'Ultra-thin laptop with M3 chip', '/static/uploads/macbook.jpg', 'electronics'),
+                ('AirPods Pro', 39999.0, 'Premium wireless earbuds', '/static/uploads/airpods.jpg', 'electronics'),
+                ('Nike Air Max', 15999.0, 'Comfortable running shoes', '/static/uploads/nike.jpg', 'fashion'),
+                ('Sony Camera', 89999.0, 'Professional digital camera', '/static/uploads/camera.jpg', 'electronics')
+            ]
+            
+            cursor.executemany("""
+                INSERT OR IGNORE INTO products (name, price, description, image_url, category) 
+                VALUES (?, ?, ?, ?, ?)
+            """, sample_products)
+            
+            conn.commit()
+            conn.close()
+            
+            print("✅ SQLiteフォールバックデータベース初期化完了")
+            
+            # DATABASE_URLをSQLiteパスに一時的に変更
+            os.environ['FALLBACK_MODE'] = 'true'
+            
+        except Exception as e:
+            print(f"❌ SQLiteフォールバック初期化失敗: {e}")
+    
+    def _get_sqlite_connection(self):
+        """SQLite接続を取得"""
+        import sqlite3
+        
+        db_path = '/tmp/fallback_shop.db'
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row  # 辞書形式でアクセス可能
+        return conn
         
     def get_db_connection(self):
-        """データベース接続を取得"""
+        """データベース接続を取得（フォールバック対応）"""
+        # フォールバックモードが有効な場合はSQLiteを使用
+        if os.getenv('FALLBACK_MODE') == 'true':
+            return self._get_sqlite_connection()
+            
         try:
             if self.use_postgres and self.database_url:
-                print(f"🔍 DATABASE_URL接続試行: {self.database_url[:50]}...")
+                print(f"🔍 PostgreSQL接続試行: {self.database_url[:50]}...")
                 
                 # PostgreSQL/Supabase接続（接続パラメータを追加）
                 conn = psycopg2.connect(
                     self.database_url,
                     cursor_factory=RealDictCursor,
-                    connect_timeout=30,
+                    connect_timeout=10,
                     application_name='vulnerable_shopping_mall'
                 )
                 

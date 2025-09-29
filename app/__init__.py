@@ -469,6 +469,52 @@ def create_app():
                 'error_type': type(e).__name__
             })
 
+    # 強制SQLiteフォールバック有効化
+    @app.route('/api/enable-fallback')
+    def enable_fallback():
+        try:
+            import os
+            import sqlite3
+            
+            # フォールバックモードを強制有効化
+            os.environ['FALLBACK_MODE'] = 'true'
+            
+            # SQLiteデータベースを初期化
+            from app.database import db_config
+            db_config._initialize_sqlite_fallback()
+            
+            # テスト接続
+            conn = db_config.get_db_connection()
+            cursor = conn.cursor()
+            
+            # データ確認
+            cursor.execute("SELECT COUNT(*) as user_count FROM users")
+            user_count = cursor.fetchone()
+            
+            cursor.execute("SELECT COUNT(*) as product_count FROM products") 
+            product_count = cursor.fetchone()
+            
+            cursor.execute("SELECT name, price FROM products LIMIT 3")
+            sample_products = cursor.fetchall()
+            
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'method': 'sqlite_fallback',
+                'message': 'SQLiteフォールバック有効化成功',
+                'users_count': dict(user_count)['COUNT(*)'] if user_count else 0,
+                'products_count': dict(product_count)['COUNT(*)'] if product_count else 0,
+                'sample_products': [dict(row) for row in sample_products] if sample_products else []
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'error_type': type(e).__name__
+            })
+
     # SQLiteフォールバック接続テスト
     @app.route('/api/fallback-test')
     def fallback_test():
