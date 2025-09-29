@@ -381,11 +381,113 @@ def create_app():
                 'message': str(error)
             }), 500
     
+    # 最優先: メインページルート（ブループリント登録前に定義）
+    @app.route('/')
+    def main_index():
+        """メインページ - ショッピングモールのトップページ"""
+        try:
+            from app.database import db_config
+            from flask import render_template
+            
+            print("🔄 メインページ表示処理開始...")
+            
+            # 人気商品を取得
+            featured_products = db_config.execute_query(
+                "SELECT * FROM products ORDER BY id DESC LIMIT 4"
+            ) or []
+            
+            print(f"📦 取得商品数: {len(featured_products)}")
+            
+            # 最新レビューを取得
+            recent_reviews = db_config.execute_query("""
+                SELECT r.*, u.username, p.name as product_name, p.image_url 
+                FROM reviews r 
+                JOIN users u ON r.user_id = u.id 
+                JOIN products p ON r.product_id = p.id 
+                ORDER BY r.created_at DESC LIMIT 10
+            """) or []
+            
+            print(f"💬 取得レビュー数: {len(recent_reviews)}")
+            
+            # HTMLテンプレートでレンダリング
+            print("🎨 HTMLテンプレート使用")
+            return render_template('main/index.html', 
+                                 featured_products=featured_products, 
+                                 recent_reviews=recent_reviews,
+                                 review_query='')
+                                 
+        except Exception as e:
+            print(f"❌ メインページエラー: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            # 最後のフォールバック: 基本HTML直接出力
+            featured_products = []
+            try:
+                from app.database import db_config
+                featured_products = db_config.execute_query(
+                    "SELECT * FROM products ORDER BY id DESC LIMIT 4"
+                ) or []
+            except:
+                pass
+            
+            return f'''<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔒 脆弱なショッピングモール</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="text-center py-5">
+            <h1 class="display-5 fw-bold mb-3">🔒 脆弱なショッピングモール</h1>
+            <p class="lead text-muted mb-4">ウェブセキュリティ演習用のショッピングサイトです</p>
+            <p class="text-warning">⚠️ このサイトは学習目的のみで使用してください</p>
+        </div>
+        
+        <div class="row mt-5">
+            <div class="col-md-12">
+                <h4 class="mb-4">人気商品 ({len(featured_products)}件)</h4>
+                <div class="row">
+                    {"".join([f'''
+                    <div class="col-md-3 mb-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">{p[1] if len(p) > 1 else "商品名"}</h6>
+                                <p class="card-text">¥{p[3]:,.0f}</p>
+                                <p class="card-text text-muted">{p[2] if len(p) > 2 else ""}</p>
+                            </div>
+                        </div>
+                    </div>
+                    ''' for p in featured_products[:4]])}
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <h5>📍 機能へのアクセス</h5>
+                <ul class="list-group">
+                    <li class="list-group-item"><a href="/products">🛍️ 商品一覧</a></li>
+                    <li class="list-group-item"><a href="/auth/register">👤 新規登録</a></li>
+                    <li class="list-group-item"><a href="/auth/login">🔑 ログイン</a></li>
+                    <li class="list-group-item"><a href="/health">🔧 ヘルスチェック</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>'''
+
     # ブループリント登録
     try:
         from app.routes import main, auth, product, cart, order, review, admin, user, api, mail
         
-        app.register_blueprint(main.bp)
+        # メインブループリント以外を登録（メインページは上で直接定義済み）
         app.register_blueprint(auth.bp)
         app.register_blueprint(product.bp)
         app.register_blueprint(cart.bp)
@@ -396,55 +498,13 @@ def create_app():
         app.register_blueprint(api.bp)
         app.register_blueprint(mail.bp)
         
-        print("✅ 全ブループリント登録完了")
+        print("✅ ブループリント登録完了（mainページ除く）")
         
     except ImportError as e:
         print(f"❌ ブループリント登録エラー: {e}")
         import traceback
         traceback.print_exc()
-        
-        # 緊急フォールバック: 直接メインページ実装
-        @app.route('/')
-        def emergency_index():
-            try:
-                from app.database import db_config
-                from flask import render_template
-                
-                # 人気商品を取得
-                featured_products = db_config.execute_query(
-                    "SELECT * FROM products ORDER BY id DESC LIMIT 4"
-                )
-                
-                # 最新レビューを取得
-                recent_reviews = db_config.execute_query("""
-                    SELECT r.*, u.username, p.name as product_name, p.image_url 
-                    FROM reviews r 
-                    JOIN users u ON r.user_id = u.id 
-                    JOIN products p ON r.product_id = p.id 
-                    ORDER BY r.created_at DESC LIMIT 10
-                """)
-                
-                # HTMLテンプレートを試行
-                return render_template('main/index.html', 
-                                     featured_products=featured_products or [], 
-                                     recent_reviews=recent_reviews or [],
-                                     review_query='')
-                                     
-            except Exception as template_error:
-                print(f"❌ 緊急フォールバックエラー: {template_error}")
-                import traceback
-                traceback.print_exc()
-                
-                # 最終フォールバック（JSONレスポンス）
-                return jsonify({
-                    'message': '🔒 脆弱なショッピングモール - ウェブセキュリティ演習サイト',
-                    'status': 'running',
-                    'mode': 'JSON API (テンプレートフォールバック)',
-                    'note': '⚠️ このサイトは学習目的のみで使用してください',
-                    'featured_products': featured_products or [],
-                    'recent_reviews': recent_reviews or [],
-                    'review_query': ''
-                })
+        print("⚠️ 一部ブループリントの登録に失敗しましたが、メインページは動作します")
     
     # 環境変数とSupabase設定確認
     @app.route('/api/config-check')
