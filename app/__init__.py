@@ -213,57 +213,73 @@ def create_app():
         try:
             from app.database import db_config
             
+            results = {}
+            
             # ユーザーテーブル作成
-            db_config.execute_update("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id SERIAL PRIMARY KEY,
-                    username VARCHAR(255) UNIQUE NOT NULL,
-                    password VARCHAR(255) NOT NULL,
-                    email VARCHAR(255),
-                    address TEXT,
-                    phone VARCHAR(255),
-                    is_admin BOOLEAN DEFAULT false,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
+            try:
+                result = db_config.execute_update("""
+                    CREATE TABLE IF NOT EXISTS users (
+                        id SERIAL PRIMARY KEY,
+                        username VARCHAR(255) UNIQUE NOT NULL,
+                        password VARCHAR(255) NOT NULL,
+                        email VARCHAR(255),
+                        address TEXT,
+                        phone VARCHAR(255),
+                        is_admin BOOLEAN DEFAULT false,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                results['users'] = 'SUCCESS' if result is not None else 'FAILED'
+            except Exception as e:
+                results['users'] = f'ERROR: {str(e)}'
             
             # 商品テーブル作成
-            db_config.execute_update("""
-                CREATE TABLE IF NOT EXISTS products (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(255) NOT NULL,
-                    description TEXT,
-                    price DECIMAL(10,2) NOT NULL,
-                    stock INTEGER DEFAULT 0,
-                    category VARCHAR(255),
-                    image_url TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
+            try:
+                result = db_config.execute_update("""
+                    CREATE TABLE IF NOT EXISTS products (
+                        id SERIAL PRIMARY KEY,
+                        name VARCHAR(255) NOT NULL,
+                        description TEXT,
+                        price DECIMAL(10,2) NOT NULL,
+                        stock INTEGER DEFAULT 0,
+                        category VARCHAR(255),
+                        image_url TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                results['products'] = 'SUCCESS' if result is not None else 'FAILED'
+            except Exception as e:
+                results['products'] = f'ERROR: {str(e)}'
             
             # レビューテーブル作成
-            db_config.execute_update("""
-                CREATE TABLE IF NOT EXISTS reviews (
-                    id SERIAL PRIMARY KEY,
-                    product_id INTEGER NOT NULL,
-                    user_id INTEGER NOT NULL,
-                    rating INTEGER NOT NULL,
-                    comment TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (product_id) REFERENCES products (id),
-                    FOREIGN KEY (user_id) REFERENCES users (id)
-                )
-            """)
+            try:
+                result = db_config.execute_update("""
+                    CREATE TABLE IF NOT EXISTS reviews (
+                        id SERIAL PRIMARY KEY,
+                        product_id INTEGER NOT NULL,
+                        user_id INTEGER NOT NULL,
+                        rating INTEGER NOT NULL,
+                        comment TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                results['reviews'] = 'SUCCESS' if result is not None else 'FAILED'
+            except Exception as e:
+                results['reviews'] = f'ERROR: {str(e)}'
+            
+            success_count = sum(1 for v in results.values() if v == 'SUCCESS')
             
             return jsonify({
-                'success': True,
-                'message': 'テーブル作成完了'
+                'success': success_count > 0,
+                'message': f'{success_count}/3 テーブル作成完了',
+                'details': results
             })
             
         except Exception as e:
             return jsonify({
                 'success': False,
-                'error': str(e)
+                'error': str(e),
+                'message': '全般的なエラー'
             }), 500
     
     # 緊急用: 初期データ投入エンドポイント
@@ -272,31 +288,54 @@ def create_app():
         try:
             from app.database import db_config
             
-            # テストユーザー作成
-            db_config.execute_update("""
-                INSERT INTO users (username, password, email, is_admin) VALUES 
-                ('admin', 'admin123', 'admin@shop.com', true),
-                ('user1', 'password123', 'user1@test.com', false)
-                ON CONFLICT (username) DO NOTHING
-            """)
+            results = {}
             
-            # テスト商品作成
-            db_config.execute_update("""
-                INSERT INTO products (name, description, price, stock, category, image_url) VALUES 
+            # テストユーザー作成
+            try:
+                result = db_config.execute_update("""
+                    INSERT INTO users (username, password, email, is_admin) VALUES 
+                    ('admin', 'admin123', 'admin@shop.com', true),
+                    ('user1', 'password123', 'user1@test.com', false)
+                    ON CONFLICT (username) DO NOTHING
+                """)
+                results['users_inserted'] = 'SUCCESS' if result is not None else 'NO_CHANGE'
+            except Exception as e:
+                results['users_inserted'] = f'ERROR: {str(e)}'
+            
+            # テスト商品作成（1つずつ）
+            products = [
                 ('ノートパソコン', '高性能ノートパソコンです', 120000.00, 10, '電子機器', 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=300&fit=crop'),
                 ('スマートフォン', '最新スマートフォンです', 80000.00, 15, '電子機器', 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=300&fit=crop'),
-                ('ヘッドフォン', '高音質ヘッドフォンです', 15000.00, 20, '電子機器', 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop')
-            """)
+                ('ヘッドフォン', '高音質ヘッドフォンです', 15000.00, 20, '電子機器', 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop'),
+                ('デスク', '快適なデスクです', 20000.00, 5, '家具', 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop'),
+                ('椅子', '人間工学に基づいた椅子です', 30000.00, 8, '家具', 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=400&h=300&fit=crop')
+            ]
+            
+            inserted_count = 0
+            for i, (name, desc, price, stock, category, image_url) in enumerate(products):
+                try:
+                    result = db_config.execute_update(
+                        "INSERT INTO products (name, description, price, stock, category, image_url) VALUES (?, ?, ?, ?, ?, ?)",
+                        (name, desc, price, stock, category, image_url)
+                    )
+                    if result is not None:
+                        inserted_count += 1
+                except Exception as e:
+                    results[f'product_{i+1}_error'] = str(e)
+            
+            results['products_inserted'] = f'{inserted_count}/{len(products)} products'
             
             return jsonify({
-                'success': True,
-                'message': '初期データ投入完了'
+                'success': inserted_count > 0,
+                'message': f'初期データ投入: ユーザー{results.get("users_inserted", "UNKNOWN")}, 商品{inserted_count}件',
+                'details': results
             })
             
         except Exception as e:
             return jsonify({
                 'success': False,
-                'error': str(e)
+                'error': str(e),
+                'message': 'データ投入エラー'
             }), 500
     
     # エラーハンドラー
