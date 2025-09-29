@@ -144,6 +144,8 @@ class DatabaseConfig:
         
     def get_db_connection(self):
         """データベース接続を取得（フォールバック対応）"""
+        import os
+        
         # フォールバックモードが有効な場合はSQLiteを使用
         if os.getenv('FALLBACK_MODE') == 'true':
             return self._get_sqlite_connection()
@@ -219,6 +221,8 @@ class DatabaseConfig:
     
     def execute_query(self, query, params=None):
         """SQLクエリ実行（SELECT用）"""
+        import os
+        
         conn = self.get_db_connection()
         if not conn:
             return []
@@ -226,12 +230,15 @@ class DatabaseConfig:
         try:
             cursor = conn.cursor()
             
+            # フォールバックモードかPostgreSQL失敗の場合はSQLiteとして扱う
+            is_sqlite_mode = (os.getenv('FALLBACK_MODE') == 'true' or not self.use_postgres)
+            
             # PostgreSQLとSQLiteの構文違いを自動調整
-            if self.use_postgres and params:
+            if not is_sqlite_mode and params:
                 # PostgreSQLは%sプレースホルダー
                 adjusted_query = query.replace('?', '%s')
                 cursor.execute(adjusted_query, params)
-            elif not self.use_postgres and params:
+            elif is_sqlite_mode and params:
                 # SQLiteは?プレースホルダー
                 adjusted_query = query.replace('%s', '?')
                 cursor.execute(adjusted_query, params)
@@ -253,6 +260,8 @@ class DatabaseConfig:
     
     def execute_update(self, query, params=None):
         """SQLクエリ実行（INSERT/UPDATE/DELETE用）"""
+        import os
+        
         conn = self.get_db_connection()
         if not conn:
             return None
@@ -260,12 +269,15 @@ class DatabaseConfig:
         try:
             cursor = conn.cursor()
             
+            # フォールバックモードかPostgreSQL失敗の場合はSQLiteとして扱う
+            is_sqlite_mode = (os.getenv('FALLBACK_MODE') == 'true' or not self.use_postgres)
+            
             # PostgreSQLとSQLiteの構文違いを自動調整
-            if self.use_postgres and params:
+            if not is_sqlite_mode and params:
                 # PostgreSQLは%sプレースホルダー
                 adjusted_query = query.replace('?', '%s')
                 cursor.execute(adjusted_query, params)
-            elif not self.use_postgres and params:
+            elif is_sqlite_mode and params:
                 # SQLiteは?プレースホルダー
                 adjusted_query = query.replace('%s', '?')
                 cursor.execute(adjusted_query, params)
@@ -275,7 +287,7 @@ class DatabaseConfig:
             conn.commit()
             
             # 挿入されたIDを返す
-            if self.use_postgres:
+            if not is_sqlite_mode:  # PostgreSQL
                 if query.strip().upper().startswith('INSERT'):
                     try:
                         cursor.execute('SELECT lastval()')
