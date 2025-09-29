@@ -35,17 +35,25 @@ class DatabaseConfig:
             if self.use_postgres and self.database_url:
                 print(f"🔍 DATABASE_URL接続試行: {self.database_url[:50]}...")
                 
-                # PostgreSQL/Supabase接続
+                # PostgreSQL/Supabase接続（接続パラメータを追加）
                 conn = psycopg2.connect(
                     self.database_url,
-                    cursor_factory=RealDictCursor
+                    cursor_factory=RealDictCursor,
+                    connect_timeout=30,
+                    application_name='vulnerable_shopping_mall'
                 )
+                
+                # autocommitモードを設定（DDL文用）
+                conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
                 
                 # 接続テスト
                 cursor = conn.cursor()
-                cursor.execute("SELECT current_database(), current_schema(), version()")
-                result = cursor.fetchone()
-                print(f"✅ PostgreSQL接続成功: DB={result[0]}, Schema={result[1]}")
+                try:
+                    cursor.execute("SELECT current_database(), current_schema(), version()")
+                    result = cursor.fetchone()
+                    print(f"✅ PostgreSQL接続成功: DB={result[0]}, Schema={result[1]}")
+                except Exception as e:
+                    print(f"⚠️ 詳細情報取得失敗: {e}, でも接続は成功")
                 
                 return conn
             else:

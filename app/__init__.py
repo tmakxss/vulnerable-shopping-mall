@@ -412,6 +412,54 @@ def create_app():
                 'debug': 'テンプレートまたはデータベース接続の問題が発生しました'
             })
     
+    # シンプルテーブル作成テスト
+    @app.route('/api/simple-test')
+    def simple_test():
+        try:
+            import psycopg2
+            import psycopg2.extras
+            
+            # 直接psycopg2で接続してテスト
+            conn = psycopg2.connect(
+                os.getenv('DATABASE_URL'),
+                cursor_factory=psycopg2.extras.RealDictCursor
+            )
+            conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+            
+            cursor = conn.cursor()
+            
+            # シンプルなテーブル作成テスト
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS test_table (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(100)
+                )
+            """)
+            
+            # テストデータ挿入
+            cursor.execute("INSERT INTO test_table (name) VALUES ('test') RETURNING id")
+            insert_result = cursor.fetchone()
+            
+            # データ確認
+            cursor.execute("SELECT * FROM test_table LIMIT 5")
+            result = cursor.fetchall()
+            
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Direct connection test successful',
+                'inserted_id': dict(insert_result) if insert_result else None,
+                'table_data': [dict(row) for row in result]
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'error_type': type(e).__name__
+            }), 500
+    
     # 直接SQL実行エンドポイント（診断用）
     @app.route('/api/raw-sql')
     def raw_sql():
