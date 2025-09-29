@@ -412,6 +412,63 @@ def create_app():
                 'debug': 'テンプレートまたはデータベース接続の問題が発生しました'
             })
     
+    # 環境変数とSupabase設定確認
+    @app.route('/api/config-check')
+    def config_check():
+        try:
+            supabase_url = os.getenv('SUPABASE_URL')
+            supabase_key = os.getenv('SUPABASE_KEY')
+            database_url = os.getenv('DATABASE_URL')
+            
+            config_info = {
+                'supabase_url': supabase_url,
+                'supabase_key_length': len(supabase_key) if supabase_key else 0,
+                'database_url_preview': database_url[:80] + '...' if database_url and len(database_url) > 80 else database_url,
+                'database_url_length': len(database_url) if database_url else 0
+            }
+            
+            # DATABASE_URLの分析
+            url_analysis = {}
+            if database_url and 'postgresql://' in database_url:
+                try:
+                    import urllib.parse
+                    parsed = urllib.parse.urlparse(database_url)
+                    
+                    url_analysis = {
+                        'hostname': parsed.hostname,
+                        'port': parsed.port,
+                        'database': parsed.path[1:] if parsed.path.startswith('/') else parsed.path,
+                        'username': parsed.username,
+                        'is_supabase_direct': 'supabase.co' in (parsed.hostname or ''),
+                        'is_aws_pooled': 'amazonaws.com' in (parsed.hostname or ''),
+                        'connection_type': 'Direct' if 'supabase.co' in (parsed.hostname or '') else 'Pooled (AWS)' if 'amazonaws.com' in (parsed.hostname or '') else 'Unknown'
+                    }
+                    
+                    # Direct URLの推奨
+                    if url_analysis['is_aws_pooled'] and 'ucekealywqkiirpndaut' in database_url:
+                        suggested_direct_url = database_url.replace(parsed.hostname, 'db.ucekealywqkiirpndaut.supabase.co')
+                        url_analysis['suggested_direct_url'] = suggested_direct_url[:80] + '...' if len(suggested_direct_url) > 80 else suggested_direct_url
+                        
+                except Exception as parse_error:
+                    url_analysis['parse_error'] = str(parse_error)
+            
+            return jsonify({
+                'success': True,
+                'config': config_info,
+                'url_analysis': url_analysis,
+                'recommendations': {
+                    'use_direct_url': url_analysis.get('is_aws_pooled', False),
+                    'current_connection_type': url_analysis.get('connection_type', 'Unknown')
+                }
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'error_type': type(e).__name__
+            })
+
     # SQLiteフォールバック接続テスト
     @app.route('/api/fallback-test')
     def fallback_test():
