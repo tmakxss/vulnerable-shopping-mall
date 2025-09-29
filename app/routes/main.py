@@ -36,19 +36,34 @@ def index():
                 ORDER BY r.created_at DESC LIMIT 10
             """)
         
-        return render_template('main/index.html', 
-                             featured_products=featured_products, 
-                             recent_reviews=recent_reviews,
-                             review_query=review_query)
+        # HTMLテンプレートが見つからない場合のフォールバック
+        try:
+            return render_template('main/index.html', 
+                                 featured_products=featured_products, 
+                                 recent_reviews=recent_reviews,
+                                 review_query=review_query)
+        except Exception as template_error:
+            print(f"❌ テンプレートエラー: {template_error}")
+            # JSONレスポンスでフォールバック
+            return jsonify({
+                'message': '🔒 脆弱なショッピングモール - ウェブセキュリティ演習サイト',
+                'status': 'running',
+                'note': '⚠️ このサイトは学習目的のみで使用してください',
+                'featured_products': featured_products,
+                'recent_reviews': recent_reviews,
+                'review_query': review_query,
+                'mode': 'JSON API (テンプレートフォールバック)'
+            })
                              
     except Exception as e:
         print(f"❌ メインページエラー: {e}")
         # エラー時はJSONレスポンス
         return jsonify({
             'message': '🔒 脆弱なショッピングモール - ウェブセキュリティ演習サイト',
-            'status': 'running',
+            'status': 'running (error mode)',
             'note': '⚠️ このサイトは学習目的のみで使用してください',
-            'error': 'Template rendering failed - API mode active'
+            'error': str(e),
+            'debug': 'データベースまたはテンプレートの問題'
         })
 
 @bp.route('/products')
@@ -76,18 +91,32 @@ def products():
         # 現在のページの商品を取得
         products = all_products[offset:offset + per_page]
         
-        return render_template('main/products.html', 
-                             products=products, 
-                             category=category,
-                             current_page=page,
-                             total_pages=total_pages,
-                             total_products=total_products)
+        # HTMLテンプレートが見つからない場合のフォールバック
+        try:
+            return render_template('main/products.html', 
+                                 products=products, 
+                                 category=category,
+                                 current_page=page,
+                                 total_pages=total_pages,
+                                 total_products=total_products)
+        except Exception as template_error:
+            print(f"❌ テンプレートエラー: {template_error}")
+            # JSONレスポンスでフォールバック
+            return jsonify({
+                'page': 'Products List',
+                'total_products': total_products,
+                'current_page': page,
+                'total_pages': total_pages,
+                'category': category or 'All',
+                'products': products
+            })
                              
     except Exception as e:
         print(f"❌ 商品一覧エラー: {e}")
         return jsonify({
             'error': 'Products page failed to load',
-            'message': str(e)
+            'message': str(e),
+            'debug': 'データベース接続またはクエリの問題'
         }), 500
 
 @bp.route('/search')

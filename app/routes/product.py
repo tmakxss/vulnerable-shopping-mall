@@ -25,7 +25,18 @@ def product_detail(product_id):
             (product_id,)
         )
         
-        return render_template('product/detail.html', product=product, reviews=reviews)
+        # HTMLテンプレートが見つからない場合のフォールバック
+        try:
+            return render_template('product/detail.html', product=product, reviews=reviews)
+        except Exception as template_error:
+            print(f"❌ テンプレートエラー: {template_error}")
+            # JSONレスポンスでフォールバック
+            return jsonify({
+                'page': 'Product Detail',
+                'product': product,
+                'reviews': reviews,
+                'mode': 'JSON API (テンプレートフォールバック)'
+            })
         
     except Exception as e:
         print(f"❌ 商品詳細エラー: {e}")

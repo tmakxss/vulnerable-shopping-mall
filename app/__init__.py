@@ -53,6 +53,40 @@ def create_app():
                 'error': str(e)
             }), 500
     
+    # 商品データ直接取得エンドポイント
+    @app.route('/api/products')
+    def api_products():
+        try:
+            from app.database import db_config
+            products = db_config.execute_query("SELECT * FROM products LIMIT 10")
+            return jsonify({
+                'success': True,
+                'count': len(products),
+                'products': products
+            })
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    # ユーザーデータ直接取得エンドポイント  
+    @app.route('/api/users')
+    def api_users():
+        try:
+            from app.database import db_config
+            users = db_config.execute_query("SELECT id, username, email, is_admin FROM users")
+            return jsonify({
+                'success': True,
+                'count': len(users),
+                'users': users
+            })
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
     # エラーハンドラー
     @app.errorhandler(500)
     def internal_error(error):
