@@ -648,20 +648,12 @@ def create_app():
             
             products = db_config.execute_query(query, params) or []
             
-            # 商品データがない場合、サンプルデータを作成
+            # 商品データがない場合、確実にサンプルデータを作成
             if not products:
-                print("🔄 商品データが見つからないため、サンプルデータを作成中...")
-                sample_products = [
-                    ('MacBook Air M3', 'Ultra-thin laptop with M3 chip', 199999.0, 5, 'electronics', '/static/uploads/macbook.jpg'),
-                    ('AirPods Pro', 'Premium wireless earbuds', 39999.0, 10, 'electronics', '/static/uploads/airpods.jpg'),
-                    ('Nike Air Max', 'Comfortable running shoes', 15999.0, 15, 'fashion', '/static/uploads/nike.jpg'),
-                    ('Sony Camera', 'Professional digital camera', 89999.0, 3, 'electronics', '/static/uploads/camera.jpg'),
-                    ('デスクチェア', '人間工学に基づいたオフィスチェア', 45999.0, 8, 'furniture', '/static/uploads/chair.jpg'),
-                    ('スマートウォッチ', 'フィットネス追跡機能付き', 29999.0, 12, 'electronics', '/static/uploads/watch.jpg')
-                ]
+                print("🔄 商品データが見つからないため、確実にサンプルデータを作成中...")
                 
+                # 強制的にテーブルを作成
                 try:
-                    # テーブル作成を試行
                     db_config.execute_update("""
                         CREATE TABLE IF NOT EXISTS products (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -675,25 +667,64 @@ def create_app():
                         )
                     """)
                     
-                    # サンプルデータ挿入
+                    # ユーザーテーブルも作成
+                    db_config.execute_update("""
+                        CREATE TABLE IF NOT EXISTS users (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            username TEXT UNIQUE NOT NULL,
+                            password TEXT NOT NULL,
+                            email TEXT,
+                            address TEXT,
+                            phone TEXT,
+                            is_admin BOOLEAN DEFAULT false,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    
+                    # 管理者ユーザーとテストユーザーを作成
+                    db_config.execute_update(
+                        "INSERT OR IGNORE INTO users (username, password, email, is_admin) VALUES (?, ?, ?, ?)",
+                        ('admin', 'admin123', 'admin@shop.com', True)
+                    )
+                    db_config.execute_update(
+                        "INSERT OR IGNORE INTO users (username, password, email, is_admin) VALUES (?, ?, ?, ?)",
+                        ('user1', 'password123', 'user1@test.com', False)
+                    )
+                    
+                    # 高品質な商品データを挿入
+                    sample_products = [
+                        ('MacBook Air M3', '最新のM3チップ搭載、超薄型ノートパソコン。13.6インチRetinaディスプレイ、最大18時間のバッテリー持続時間。', 199999.0, 5, 'electronics', 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=500&h=400&fit=crop'),
+                        ('AirPods Pro (第2世代)', 'アクティブノイズキャンセリング、空間オーディオ、MagSafe充電ケース付き。', 39999.0, 10, 'electronics', 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=500&h=400&fit=crop'),
+                        ('Nike Air Max 270', '快適性とスタイルを兼ね備えたランニングシューズ。Air Max クッショニング搭載。', 15999.0, 15, 'fashion', 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&h=400&fit=crop'),
+                        ('Sony α7 IV', 'フルフレームミラーレス一眼カメラ。33MPセンサー、4K動画撮影対応。', 89999.0, 3, 'electronics', 'https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=500&h=400&fit=crop'),
+                        ('エルゴノミクスデスクチェア', '人間工学に基づいた設計、腰部サポート、360度回転。リモートワークに最適。', 45999.0, 8, 'furniture', 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500&h=400&fit=crop'),
+                        ('Apple Watch Series 9', 'フィットネス追跡、健康監視、GPS搭載。最新のS9チップで高速動作。', 59999.0, 12, 'electronics', 'https://images.unsplash.com/photo-1551816230-ef5deaed4a26?w=500&h=400&fit=crop'),
+                        ('iPhone 15 Pro', '最新のA17 Proチップ、チタニウムデザイン、Pro camera system搭載。', 159999.0, 7, 'electronics', 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&h=400&fit=crop'),
+                        ('Dyson V15 Detect', 'レーザー技術で見えないゴミまで検出する最新コードレス掃除機。', 89999.0, 4, 'home', 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500&h=400&fit=crop')
+                    ]
+                    
                     for product_data in sample_products:
                         db_config.execute_update(
                             "INSERT OR IGNORE INTO products (name, description, price, stock, category, image_url) VALUES (?, ?, ?, ?, ?, ?)",
                             product_data
                         )
                     
-                    # 再度商品データを取得
+                    # データ再取得
                     products = db_config.execute_query(query, params) or []
-                    print(f"✅ サンプルデータ作成完了: {len(products)}件の商品")
+                    print(f"✅ 完全なサンプルデータ作成完了: {len(products)}件の商品")
                     
                 except Exception as sample_error:
-                    print(f"❌ サンプルデータ作成エラー: {sample_error}")
-                    # ハードコードされたフォールバックデータ
+                    print(f"❌ データベース作成エラー: {sample_error}")
+                    
+                # データベースが完全に失敗した場合のハードコードフォールバック
+                if not products:
                     products = [
-                        (1, 'MacBook Air M3', 'Ultra-thin laptop with M3 chip', 199999.0, 5, 'electronics', '/static/uploads/macbook.jpg', '2025-09-29'),
-                        (2, 'AirPods Pro', 'Premium wireless earbuds', 39999.0, 10, 'electronics', '/static/uploads/airpods.jpg', '2025-09-29'),
-                        (3, 'Nike Air Max', 'Comfortable running shoes', 15999.0, 15, 'fashion', '/static/uploads/nike.jpg', '2025-09-29'),
-                        (4, 'Sony Camera', 'Professional digital camera', 89999.0, 3, 'electronics', '/static/uploads/camera.jpg', '2025-09-29')
+                        (1, 'MacBook Air M3', '最新のM3チップ搭載、超薄型ノートパソコン', 199999.0, 5, 'electronics', 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=500&h=400&fit=crop', '2025-09-29'),
+                        (2, 'AirPods Pro', 'アクティブノイズキャンセリング搭載', 39999.0, 10, 'electronics', 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=500&h=400&fit=crop', '2025-09-29'),
+                        (3, 'Nike Air Max 270', 'Air Max クッショニング搭載ランニングシューズ', 15999.0, 15, 'fashion', 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&h=400&fit=crop', '2025-09-29'),
+                        (4, 'Sony α7 IV', 'フルフレームミラーレス一眼カメラ', 89999.0, 3, 'electronics', 'https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=500&h=400&fit=crop', '2025-09-29'),
+                        (5, 'エルゴデスクチェア', '人間工学デザインオフィスチェア', 45999.0, 8, 'furniture', 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500&h=400&fit=crop', '2025-09-29'),
+                        (6, 'Apple Watch Series 9', '最新フィットネス追跡スマートウォッチ', 59999.0, 12, 'electronics', 'https://images.unsplash.com/photo-1551816230-ef5deaed4a26?w=500&h=400&fit=crop', '2025-09-29')
                     ]
             
             # カテゴリ一覧取得
@@ -824,6 +855,303 @@ def create_app():
             return f'''<!DOCTYPE html>
 <html><head><title>エラー</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
 <body><div class="container mt-5"><h1>商品一覧エラー</h1><p>エラー: {str(e)}</p><a href="/" class="btn btn-primary">ホームに戻る</a></div></body></html>'''
+
+    # ログインページ
+    @app.route('/auth/login', methods=['GET', 'POST'])
+    def login_page():
+        """ログインページ"""
+        if request.method == 'POST':
+            try:
+                from app.database import db_config
+                from flask import session, redirect, flash
+                
+                username = request.form.get('username')
+                password = request.form.get('password')
+                
+                if not username or not password:
+                    error_msg = 'ユーザー名とパスワードを入力してください'
+                else:
+                    # ユーザー認証（脆弱性: SQLインジェクション可能）
+                    users = db_config.execute_query(
+                        f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
+                    )
+                    
+                    if users:
+                        user = users[0]
+                        session['user_id'] = user[0]
+                        session['username'] = user[1]
+                        session['is_admin'] = user[6] if len(user) > 6 else False
+                        return redirect('/')
+                    else:
+                        error_msg = 'ユーザー名またはパスワードが間違っています'
+                        
+            except Exception as e:
+                error_msg = f'ログインエラー: {str(e)}'
+        else:
+            error_msg = ''
+            
+        return f'''<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ログイン - 脆弱なショッピングモール</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        .login-container {{ max-width: 400px; margin: 100px auto; }}
+        .navbar {{ background: #2c3e50 !important; }}
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="bi bi-shield-exclamation"></i> 脆弱なショッピングモール</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">ホーム</a>
+                <a class="nav-link" href="/products">商品</a>
+                <a class="nav-link" href="/auth/register">新規登録</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="login-container">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title text-center mb-4">
+                        <i class="bi bi-person-circle"></i> ログイン
+                    </h4>
+                    
+                    {('<div class="alert alert-danger">' + error_msg + '</div>') if error_msg else ''}
+                    
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label class="form-label">ユーザー名</label>
+                            <input type="text" class="form-control" name="username" required>
+                            <div class="form-text">テスト用: admin / user1</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">パスワード</label>
+                            <input type="password" class="form-control" name="password" required>
+                            <div class="form-text">テスト用: admin123 / password123</div>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-key"></i> ログイン
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <hr>
+                    <div class="text-center">
+                        <p class="mb-0">アカウントをお持ちでない方は</p>
+                        <a href="/auth/register" class="btn btn-outline-success">
+                            <i class="bi bi-person-plus"></i> 新規登録
+                        </a>
+                    </div>
+                    
+                    <div class="mt-3 text-center">
+                        <small class="text-muted">
+                            <i class="bi bi-exclamation-triangle"></i> 
+                            学習用サイト: SQLインジェクション脆弱性あり
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>'''
+
+    # 新規登録ページ
+    @app.route('/auth/register', methods=['GET', 'POST'])
+    def register_page():
+        """新規登録ページ"""
+        if request.method == 'POST':
+            try:
+                from app.database import db_config
+                from flask import redirect
+                
+                username = request.form.get('username')
+                password = request.form.get('password')
+                email = request.form.get('email')
+                
+                if not username or not password:
+                    error_msg = 'ユーザー名とパスワードを入力してください'
+                else:
+                    # テーブル作成確認
+                    db_config.execute_update('''
+                        CREATE TABLE IF NOT EXISTS users (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            username TEXT UNIQUE NOT NULL,
+                            password TEXT NOT NULL,
+                            email TEXT,
+                            address TEXT,
+                            phone TEXT,
+                            is_admin BOOLEAN DEFAULT false,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                        )
+                    ''')
+                    
+                    # ユーザー登録（脆弱性: パスワード平文保存）
+                    result = db_config.execute_update(
+                        "INSERT INTO users (username, password, email) VALUES (?, ?, ?)",
+                        (username, password, email)
+                    )
+                    
+                    if result is not None:
+                        return redirect('/auth/login?success=registered')
+                    else:
+                        error_msg = 'ユーザー名が既に使用されています'
+                        
+            except Exception as e:
+                error_msg = f'登録エラー: {str(e)}'
+        else:
+            error_msg = ''
+            
+        return f'''<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新規登録 - 脆弱なショッピングモール</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        .register-container {{ max-width: 500px; margin: 50px auto; }}
+        .navbar {{ background: #2c3e50 !important; }}
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="bi bi-shield-exclamation"></i> 脆弱なショッピングモール</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">ホーム</a>
+                <a class="nav-link" href="/products">商品</a>
+                <a class="nav-link" href="/auth/login">ログイン</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="register-container">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title text-center mb-4">
+                        <i class="bi bi-person-plus-fill"></i> 新規登録
+                    </h4>
+                    
+                    {('<div class="alert alert-danger">' + error_msg + '</div>') if error_msg else ''}
+                    
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label class="form-label">ユーザー名 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">パスワード <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" name="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">メールアドレス</label>
+                            <input type="email" class="form-control" name="email">
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-person-plus"></i> 登録
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <hr>
+                    <div class="text-center">
+                        <p class="mb-0">既にアカウントをお持ちの方は</p>
+                        <a href="/auth/login" class="btn btn-outline-primary">
+                            <i class="bi bi-key"></i> ログイン
+                        </a>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="alert alert-warning" role="alert">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>セキュリティ警告:</strong> このサイトは学習用です。
+                            パスワードは平文で保存されます。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>'''
+
+    # 商品詳細ページ
+    @app.route('/product/<int:product_id>')
+    def product_detail(product_id):
+        """商品詳細ページ"""
+        try:
+            from app.database import db_config
+            
+            # 商品情報取得
+            products = db_config.execute_query(
+                "SELECT * FROM products WHERE id = ?",
+                (product_id,)
+            )
+            
+            if not products:
+                return redirect('/products')
+                
+            product = products[0]
+            
+            return f'''<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>{product[1]} - 脆弱なショッピングモール</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>.navbar {{ background: #2c3e50 !important; }}</style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="bi bi-shield-exclamation"></i> 脆弱なショッピングモール</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">ホーム</a>
+                <a class="nav-link" href="/products">商品</a>
+                <a class="nav-link" href="/auth/login">ログイン</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <div class="row">
+            <div class="col-md-6">
+                <img src="{product[6] if len(product) > 6 else '/static/no-image.jpg'}" class="img-fluid" alt="{product[1]}">
+            </div>
+            <div class="col-md-6">
+                <h1>{product[1]}</h1>
+                <p class="text-muted">{product[2] if len(product) > 2 else ''}></p>
+                <h3 class="text-primary">¥{product[3]:,.0f}</h3>
+                <p>在庫: {product[4] if len(product) > 4 else 0}個</p>
+                <button class="btn btn-primary btn-lg"><i class="bi bi-cart-plus"></i> カートに追加</button>
+                <a href="/products" class="btn btn-secondary">商品一覧に戻る</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>'''
+        except Exception as e:
+            return f'<h1>エラー: {str(e)}</h1><a href="/products">商品一覧に戻る</a>'
+
+    # 必須: request, redirect, sessionのインポートを追加
+    from flask import request, redirect, session
 
     # ブループリント登録
     try:
