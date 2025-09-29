@@ -489,23 +489,38 @@ def create_app():
             
             # データ確認
             cursor.execute("SELECT COUNT(*) as user_count FROM users")
-            user_count = cursor.fetchone()
+            user_count_result = cursor.fetchone()
             
             cursor.execute("SELECT COUNT(*) as product_count FROM products") 
-            product_count = cursor.fetchone()
+            product_count_result = cursor.fetchone()
             
             cursor.execute("SELECT name, price FROM products LIMIT 3")
             sample_products = cursor.fetchall()
             
             conn.close()
             
+            # SQLiteの結果を正しく処理
+            user_count = 0
+            product_count = 0
+            
+            if user_count_result:
+                user_count = user_count_result['user_count'] if isinstance(user_count_result, dict) else user_count_result[0]
+            
+            if product_count_result:
+                product_count = product_count_result['product_count'] if isinstance(product_count_result, dict) else product_count_result[0]
+            
             return jsonify({
                 'success': True,
                 'method': 'sqlite_fallback',
                 'message': 'SQLiteフォールバック有効化成功',
-                'users_count': dict(user_count)['COUNT(*)'] if user_count else 0,
-                'products_count': dict(product_count)['COUNT(*)'] if product_count else 0,
-                'sample_products': [dict(row) for row in sample_products] if sample_products else []
+                'users_count': user_count,
+                'products_count': product_count,
+                'sample_products': [dict(row) for row in sample_products] if sample_products else [],
+                'debug_info': {
+                    'user_count_raw': dict(user_count_result) if user_count_result else None,
+                    'product_count_raw': dict(product_count_result) if product_count_result else None,
+                    'fallback_mode': os.getenv('FALLBACK_MODE')
+                }
             })
             
         except Exception as e:
