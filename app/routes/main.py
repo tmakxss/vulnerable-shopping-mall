@@ -18,24 +18,14 @@ def index():
         
         if review_query:
             # レビュー検索 (SQLインジェクション対策済み、XSS脆弱性は残存)
-            if db_config.use_postgres:
-                recent_reviews = db_config.execute_query("""
-                    SELECT r.*, u.username, p.name as product_name, p.image_url 
-                    FROM reviews r 
-                    JOIN users u ON r.user_id = u.id 
-                    JOIN products p ON r.product_id = p.id 
-                    WHERE r.comment LIKE %s OR u.username LIKE %s OR p.name LIKE %s
-                    ORDER BY r.created_at DESC LIMIT 10
-                """, (f'%{review_query}%', f'%{review_query}%', f'%{review_query}%'))
-            else:
-                recent_reviews = db_config.execute_query("""
-                    SELECT r.*, u.username, p.name as product_name, p.image_url 
-                    FROM reviews r 
-                    JOIN users u ON r.user_id = u.id 
-                    JOIN products p ON r.product_id = p.id 
-                    WHERE r.comment LIKE ? OR u.username LIKE ? OR p.name LIKE ?
-                    ORDER BY r.created_at DESC LIMIT 10
-                """, (f'%{review_query}%', f'%{review_query}%', f'%{review_query}%'))
+            recent_reviews = db_config.execute_query("""
+                SELECT r.*, u.username, p.name as product_name, p.image_url 
+                FROM reviews r 
+                JOIN users u ON r.user_id = u.id 
+                JOIN products p ON r.product_id = p.id 
+                WHERE r.comment LIKE ? OR u.username LIKE ? OR p.name LIKE ?
+                ORDER BY r.created_at DESC LIMIT 10
+            """, (f'%{review_query}%', f'%{review_query}%', f'%{review_query}%'))
         else:
             # 最新レビューを取得
             recent_reviews = db_config.execute_query("""
@@ -64,73 +54,80 @@ def index():
 @bp.route('/products')
 def products():
     """商品一覧ページ"""
-    category = request.args.get('category', '')
-    page = request.args.get('page', 1, type=int)
-    per_page = 9
-    offset = (page - 1) * per_page
-    
-    conn = sqlite3.connect('database/shop.db')
-    cursor = conn.cursor()
-    
-    if category:
-        # SQLインジェクション脆弱性
-        query = f"SELECT * FROM products WHERE category = '{category}'"
-        cursor.execute(query)
-    else:
-        cursor.execute("SELECT * FROM products")
-    
-    all_products = cursor.fetchall()
-    
-    # ページング処理
-    total_products = len(all_products)
-    total_pages = (total_products + per_page - 1) // per_page
-    
-    # 現在のページの商品を取得
-    products = all_products[offset:offset + per_page]
-    
-    conn.close()
-    
-    return render_template('main/products.html', 
-                         products=products, 
-                         category=category,
-                         current_page=page,
-                         total_pages=total_pages,
-                         total_products=total_products)
+    try:
+        category = request.args.get('category', '')
+        page = request.args.get('page', 1, type=int)
+        per_page = 9
+        offset = (page - 1) * per_page
+        
+        if category:
+            # カテゴリフィルター
+            all_products = db_config.execute_query(
+                "SELECT * FROM products WHERE category = ?",
+                (category,)
+            )
+        else:
+            all_products = db_config.execute_query("SELECT * FROM products")
+        
+        # ページング処理
+        total_products = len(all_products)
+        total_pages = (total_products + per_page - 1) // per_page if total_products > 0 else 1
+        
+        # 現在のページの商品を取得
+        products = all_products[offset:offset + per_page]
+        
+        return render_template('main/products.html', 
+                             products=products, 
+                             category=category,
+                             current_page=page,
+                             total_pages=total_pages,
+                             total_products=total_products)
+                             
+    except Exception as e:
+        print(f"❌ 商品一覧エラー: {e}")
+        return jsonify({
+            'error': 'Products page failed to load',
+            'message': str(e)
+        }), 500
 
 @bp.route('/search')
 def search():
     """商品検索ページ"""
-    query = request.args.get('q', '')
-    page = request.args.get('page', 1, type=int)
-    per_page = 9
-    offset = (page - 1) * per_page
-    
-    if query:
-        conn = sqlite3.connect('database/shop.db')
-        cursor = conn.cursor()
+    try:
+        query = request.args.get('q', '')
+        page = request.args.get('page', 1, type=int)
+        per_page = 9
+        offset = (page - 1) * per_page
         
-        # SQLインジェクション脆弱性
-        sql_query = f"SELECT * FROM products WHERE name LIKE '%{query}%' OR description LIKE '%{query}%'"
-        cursor.execute(sql_query)
-        all_results = cursor.fetchall()
+        if query:
+            # 商品検索
+            all_results = db_config.execute_query(
+                "SELECT * FROM products WHERE name LIKE ? OR description LIKE ?",
+                (f'%{query}%', f'%{query}%')
+            )
+            
+            # ページング処理
+            total_results = len(all_results)
+            total_pages = (total_results + per_page - 1) // per_page if total_results > 0 else 1
+            
+            # 現在のページの結果を取得
+            results = all_results[offset:offset + per_page]
+            
+            return render_template('main/search.html', 
+                                 results=results, 
+                                 query=query,
+                                 current_page=page,
+                                 total_pages=total_pages,
+                                 total_results=total_results)
         
-        # ページング処理
-        total_results = len(all_results)
-        total_pages = (total_results + per_page - 1) // per_page
+        return render_template('main/search.html')
         
-        # 現在のページの結果を取得
-        results = all_results[offset:offset + per_page]
-        
-        conn.close()
-        
-        return render_template('main/search.html', 
-                             results=results, 
-                             query=query,
-                             current_page=page,
-                             total_pages=total_pages,
-                             total_results=total_results)
-    
-    return render_template('main/search.html')
+    except Exception as e:
+        print(f"❌ 検索エラー: {e}")
+        return jsonify({
+            'error': 'Search failed',
+            'message': str(e)
+        }), 500
 
 @bp.route('/about')
 def about():

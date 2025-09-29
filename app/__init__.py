@@ -69,7 +69,8 @@ def create_app():
                 'message': '🔒 脆弱なショッピングモール - ウェブセキュリティ演習サイト',
                 'status': 'running (fallback mode)',
                 'note': '⚠️ このサイトは学習目的のみで使用してください',
-                'error': 'Some modules failed to load'
+                'error': 'Some modules failed to load',
+                'debug': 'テンプレートまたはデータベース接続の問題が発生しました'
             })
     
     return app 

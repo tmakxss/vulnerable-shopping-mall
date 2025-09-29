@@ -14,26 +14,38 @@ def login():
         # 隠しパラメータによる権限変更 (権限昇格脆弱性)
         role = request.form.get('role', 'user')  # デフォルト値は 'user'
         
-        # SQLインジェクション脆弱性のあるログイン
-        query = f"SELECT * FROM users WHERE username='{username}' AND password='{password}'"
-        users = db_config.execute_query(query)
-        user = users[0] if users else None
-        
-        if user:
-            # 隠しパラメータによる権限変更
-            is_admin = False
-            if role == 'admin':
-                is_admin = True
-            elif role == 'super_admin':
-                is_admin = True  # スーパー管理者権限
-            elif role == 'moderator':
-                is_admin = True  # モデレーター権限
-            else:
-                is_admin = user.get('is_admin', False)  # 元の権限を維持
+        try:
+            # まず安全なクエリでユーザーを検索（学習目的のため、後で脆弱なバージョンも提供）
+            users = db_config.execute_query(
+                "SELECT * FROM users WHERE username = ? AND password = ?",
+                (username, password)
+            )
+            user = users[0] if users else None
             
-            session['user_id'] = user['id']
-            session['username'] = user['username']
-            session['is_admin'] = is_admin
+            if user:
+                # 隠しパラメータによる権限変更
+                is_admin = False
+                if role == 'admin':
+                    is_admin = True
+                elif role == 'super_admin':
+                    is_admin = True  # スーパー管理者権限
+                elif role == 'moderator':
+                    is_admin = True  # モデレーター権限
+                else:
+                    is_admin = user.get('is_admin', False)  # 元の権限を維持
+                
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                session['is_admin'] = is_admin
+                
+                flash('ログインしました', 'success')
+                return redirect('/')
+            else:
+                flash('ユーザー名またはパスワードが間違っています', 'error')
+                
+        except Exception as e:
+            print(f"❌ ログインエラー: {e}")
+            flash('ログインエラーが発生しました', 'error')
             session['role'] = role  # 役割情報もセッションに保存
             
             # 脆弱なCookie設定
@@ -68,20 +80,34 @@ def register():
         password = request.form.get('password')
         email = request.form.get('email')
         
-        try:
-            # XSS脆弱性のあるユーザー登録
-            result = db_config.execute_update(
-                "INSERT INTO users (username, password, email) VALUES (%s, %s, %s)" if db_config.use_postgres else "INSERT INTO users (username, password, email) VALUES (?, ?, ?)", 
-                (username, password, email)
-            )
-            if result:
-                flash('ユーザー登録が完了しました', 'success')
-                return redirect('/login')
-            else:
-                flash('このユーザー名は既に使用されています', 'error')
-        except Exception as e:
-            flash('登録エラーが発生しました', 'error')
-            print(f"登録エラー: {e}")
+        # 入力値の検証
+        if not username or not password or not email:
+            flash('すべての項目を入力してください', 'error')
+        else:
+            try:
+                # 既存ユーザーチェック
+                existing_users = db_config.execute_query(
+                    "SELECT id FROM users WHERE username = ? OR email = ?",
+                    (username, email)
+                )
+                
+                if existing_users:
+                    flash('このユーザー名またはメールアドレスは既に使用されています', 'error')
+                else:
+                    # 新規ユーザー登録
+                    result = db_config.execute_update(
+                        "INSERT INTO users (username, password, email) VALUES (?, ?, ?)", 
+                        (username, password, email)
+                    )
+                    if result:
+                        flash('ユーザー登録が完了しました', 'success')
+                        return redirect('/login')
+                    else:
+                        flash('登録に失敗しました', 'error')
+                        
+            except Exception as e:
+                flash('登録エラーが発生しました', 'error')
+                print(f"❌ 登録エラー: {e}")
     
     return render_template('auth/register.html')
 

@@ -56,8 +56,16 @@ class DatabaseConfig:
             
         try:
             cursor = conn.cursor()
-            if params:
-                cursor.execute(query, params)
+            
+            # PostgreSQLとSQLiteの構文違いを自動調整
+            if self.use_postgres and params:
+                # PostgreSQLは%sプレースホルダー
+                adjusted_query = query.replace('?', '%s')
+                cursor.execute(adjusted_query, params)
+            elif not self.use_postgres and params:
+                # SQLiteは?プレースホルダー
+                adjusted_query = query.replace('%s', '?')
+                cursor.execute(adjusted_query, params)
             else:
                 cursor.execute(query)
             
@@ -68,6 +76,8 @@ class DatabaseConfig:
                 
         except Exception as e:
             print(f"❌ クエリ実行エラー: {e}")
+            print(f"クエリ: {query}")
+            print(f"パラメータ: {params}")
             return []
         finally:
             conn.close()
@@ -80,8 +90,16 @@ class DatabaseConfig:
             
         try:
             cursor = conn.cursor()
-            if params:
-                cursor.execute(query, params)
+            
+            # PostgreSQLとSQLiteの構文違いを自動調整
+            if self.use_postgres and params:
+                # PostgreSQLは%sプレースホルダー
+                adjusted_query = query.replace('?', '%s')
+                cursor.execute(adjusted_query, params)
+            elif not self.use_postgres and params:
+                # SQLiteは?プレースホルダー
+                adjusted_query = query.replace('%s', '?')
+                cursor.execute(adjusted_query, params)
             else:
                 cursor.execute(query)
             
@@ -90,15 +108,20 @@ class DatabaseConfig:
             # 挿入されたIDを返す
             if self.use_postgres:
                 if query.strip().upper().startswith('INSERT'):
-                    cursor.execute('SELECT lastval()')
-                    result = cursor.fetchone()
-                    return result[0] if result else None
+                    try:
+                        cursor.execute('SELECT lastval()')
+                        result = cursor.fetchone()
+                        return result[0] if result else None
+                    except:
+                        return True  # 成功したが、IDが取得できない場合
             else:
                 return cursor.lastrowid
                 
         except Exception as e:
             conn.rollback()
             print(f"❌ 更新クエリエラー: {e}")
+            print(f"クエリ: {query}")
+            print(f"パラメータ: {params}")
             return None
         finally:
             conn.close()
