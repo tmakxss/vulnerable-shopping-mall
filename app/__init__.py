@@ -18,33 +18,32 @@ def create_app():
     else:
         app.config['DEBUG'] = True
     
-    # テスト用エンドポイント
+    # ヘルスチェックエンドポイント（デバッグ用に残す）
     @app.route('/health')
     def health_check():
         return jsonify({
             'status': 'OK',
             'message': 'Application is running',
-            'environment': os.getenv('FLASK_ENV', 'development')
-        })
-    
-    @app.route('/')
-    def index():
-        return jsonify({
-            'message': '🔒 脆弱なショッピングモール - ウェブセキュリティ演習サイト',
-            'status': 'running',
-            'note': '⚠️ このサイトは学習目的のみで使用してください'
+            'environment': os.getenv('FLASK_ENV', 'development'),
+            'database': 'Connected' if os.getenv('DATABASE_URL') else 'Local SQLite'
         })
     
     # エラーハンドラー
     @app.errorhandler(500)
     def internal_error(error):
-        return jsonify({
-            'error': 'Internal Server Error',
-            'message': str(error)
-        }), 500
+        if os.getenv('FLASK_ENV') == 'production':
+            return jsonify({
+                'error': 'Internal Server Error',
+                'message': 'サーバーエラーが発生しました'
+            }), 500
+        else:
+            return jsonify({
+                'error': 'Internal Server Error',
+                'message': str(error)
+            }), 500
     
+    # ブループリント登録
     try:
-        # ブループリント登録（エラーが発生した場合はスキップ）
         from app.routes import main, auth, product, cart, order, review, admin, user, api, mail
         
         app.register_blueprint(main.bp)
@@ -58,8 +57,19 @@ def create_app():
         app.register_blueprint(api.bp)
         app.register_blueprint(mail.bp)
         
-    except Exception as e:
-        print(f"ブループリント登録エラー: {e}")
-        # 基本的なルートのみで起動
+        print("✅ 全ブループリント登録完了")
+        
+    except ImportError as e:
+        print(f"❌ ブループリント登録エラー: {e}")
+        
+        # フォールバック: 基本的なルートのみ
+        @app.route('/')
+        def fallback_index():
+            return jsonify({
+                'message': '🔒 脆弱なショッピングモール - ウェブセキュリティ演習サイト',
+                'status': 'running (fallback mode)',
+                'note': '⚠️ このサイトは学習目的のみで使用してください',
+                'error': 'Some modules failed to load'
+            })
     
     return app 

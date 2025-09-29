@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, request, session, redirect, flash
+from flask import Blueprint, render_template, request, session, redirect, flash, jsonify
+from app.database import db_config
 import sqlite3
 
 bp = Blueprint('main', __name__)
@@ -6,45 +7,59 @@ bp = Blueprint('main', __name__)
 @bp.route('/')
 def index():
     """メインページ"""
-    conn = sqlite3.connect('database/shop.db')
-    cursor = conn.cursor()
-    
-    # 人気商品を取得
-    cursor.execute("SELECT * FROM products ORDER BY id DESC LIMIT 4")
-    featured_products = cursor.fetchall()
-    
-    # レビュー検索機能
-    review_query = request.args.get('review_search', '')
-    recent_reviews = []
-    
-    if review_query:
-        # レビュー検索 (SQLインジェクション対策済み、XSS脆弱性は残存)
-        cursor.execute("""
-            SELECT r.*, u.username, p.name as product_name, p.image_url 
-            FROM reviews r 
-            JOIN users u ON r.user_id = u.id 
-            JOIN products p ON r.product_id = p.id 
-            WHERE r.comment LIKE ? OR u.username LIKE ? OR p.name LIKE ?
-            ORDER BY r.created_at DESC LIMIT 10
-        """, (f'%{review_query}%', f'%{review_query}%', f'%{review_query}%'))
-        recent_reviews = cursor.fetchall()
-    else:
-        # 最新レビューを取得
-        cursor.execute("""
-            SELECT r.*, u.username, p.name as product_name, p.image_url 
-            FROM reviews r 
-            JOIN users u ON r.user_id = u.id 
-            JOIN products p ON r.product_id = p.id 
-            ORDER BY r.created_at DESC LIMIT 10
-        """)
-        recent_reviews = cursor.fetchall()
-    
-    conn.close()
-    
-    return render_template('main/index.html', 
-                         featured_products=featured_products, 
-                         recent_reviews=recent_reviews,
-                         review_query=review_query)
+    try:
+        # 人気商品を取得
+        featured_products = db_config.execute_query(
+            "SELECT * FROM products ORDER BY id DESC LIMIT 4"
+        )
+        
+        # レビュー検索機能
+        review_query = request.args.get('review_search', '')
+        
+        if review_query:
+            # レビュー検索 (SQLインジェクション対策済み、XSS脆弱性は残存)
+            if db_config.use_postgres:
+                recent_reviews = db_config.execute_query("""
+                    SELECT r.*, u.username, p.name as product_name, p.image_url 
+                    FROM reviews r 
+                    JOIN users u ON r.user_id = u.id 
+                    JOIN products p ON r.product_id = p.id 
+                    WHERE r.comment LIKE %s OR u.username LIKE %s OR p.name LIKE %s
+                    ORDER BY r.created_at DESC LIMIT 10
+                """, (f'%{review_query}%', f'%{review_query}%', f'%{review_query}%'))
+            else:
+                recent_reviews = db_config.execute_query("""
+                    SELECT r.*, u.username, p.name as product_name, p.image_url 
+                    FROM reviews r 
+                    JOIN users u ON r.user_id = u.id 
+                    JOIN products p ON r.product_id = p.id 
+                    WHERE r.comment LIKE ? OR u.username LIKE ? OR p.name LIKE ?
+                    ORDER BY r.created_at DESC LIMIT 10
+                """, (f'%{review_query}%', f'%{review_query}%', f'%{review_query}%'))
+        else:
+            # 最新レビューを取得
+            recent_reviews = db_config.execute_query("""
+                SELECT r.*, u.username, p.name as product_name, p.image_url 
+                FROM reviews r 
+                JOIN users u ON r.user_id = u.id 
+                JOIN products p ON r.product_id = p.id 
+                ORDER BY r.created_at DESC LIMIT 10
+            """)
+        
+        return render_template('main/index.html', 
+                             featured_products=featured_products, 
+                             recent_reviews=recent_reviews,
+                             review_query=review_query)
+                             
+    except Exception as e:
+        print(f"❌ メインページエラー: {e}")
+        # エラー時はJSONレスポンス
+        return jsonify({
+            'message': '🔒 脆弱なショッピングモール - ウェブセキュリティ演習サイト',
+            'status': 'running',
+            'note': '⚠️ このサイトは学習目的のみで使用してください',
+            'error': 'Template rendering failed - API mode active'
+        })
 
 @bp.route('/products')
 def products():

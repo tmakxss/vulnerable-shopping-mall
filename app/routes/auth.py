@@ -1,5 +1,5 @@
 from flask import Blueprint, request, render_template, redirect, session, flash, make_response
-import sqlite3
+from app.database import db_config
 import json
 import base64
 
@@ -14,29 +14,25 @@ def login():
         # 隠しパラメータによる権限変更 (権限昇格脆弱性)
         role = request.form.get('role', 'user')  # デフォルト値は 'user'
         
-        conn = sqlite3.connect('database/shop.db')
-        cursor = conn.cursor()
-        
         # SQLインジェクション脆弱性のあるログイン
         query = f"SELECT * FROM users WHERE username='{username}' AND password='{password}'"
-        cursor.execute(query)
-        user = cursor.fetchone()
-        conn.close()
+        users = db_config.execute_query(query)
+        user = users[0] if users else None
         
         if user:
             # 隠しパラメータによる権限変更
-            is_admin = 0
+            is_admin = False
             if role == 'admin':
-                is_admin = 1
+                is_admin = True
             elif role == 'super_admin':
-                is_admin = 2  # スーパー管理者権限
+                is_admin = True  # スーパー管理者権限
             elif role == 'moderator':
-                is_admin = 3  # モデレーター権限
+                is_admin = True  # モデレーター権限
             else:
-                is_admin = user[6]  # 元の権限を維持
+                is_admin = user.get('is_admin', False)  # 元の権限を維持
             
-            session['user_id'] = user[0]
-            session['username'] = user[1]
+            session['user_id'] = user['id']
+            session['username'] = user['username']
             session['is_admin'] = is_admin
             session['role'] = role  # 役割情報もセッションに保存
             
@@ -72,20 +68,20 @@ def register():
         password = request.form.get('password')
         email = request.form.get('email')
         
-        conn = sqlite3.connect('database/shop.db')
-        cursor = conn.cursor()
-        
         try:
             # XSS脆弱性のあるユーザー登録
-            cursor.execute("INSERT INTO users (username, password, email) VALUES (?, ?, ?)", 
-                          (username, password, email))
-            conn.commit()
-            flash('ユーザー登録が完了しました', 'success')
-            return redirect('/login')
-        except sqlite3.IntegrityError:
-            flash('このユーザー名は既に使用されています', 'error')
-        finally:
-            conn.close()
+            result = db_config.execute_update(
+                "INSERT INTO users (username, password, email) VALUES (%s, %s, %s)" if db_config.use_postgres else "INSERT INTO users (username, password, email) VALUES (?, ?, ?)", 
+                (username, password, email)
+            )
+            if result:
+                flash('ユーザー登録が完了しました', 'success')
+                return redirect('/login')
+            else:
+                flash('このユーザー名は既に使用されています', 'error')
+        except Exception as e:
+            flash('登録エラーが発生しました', 'error')
+            print(f"登録エラー: {e}")
     
     return render_template('auth/register.html')
 
@@ -103,12 +99,9 @@ def profile():
         return redirect('/login')
     
     user_id = session['user_id']
-    conn = sqlite3.connect('database/shop.db')
-    cursor = conn.cursor()
     
     # SQLインジェクション脆弱性
-    cursor.execute(f"SELECT * FROM users WHERE id = {user_id}")
-    user = cursor.fetchone()
-    conn.close()
+    users = db_config.execute_query(f"SELECT * FROM users WHERE id = {user_id}")
+    user = users[0] if users else None
     
     return render_template('auth/profile.html', user=user) 
