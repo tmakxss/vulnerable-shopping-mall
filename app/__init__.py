@@ -412,6 +412,80 @@ def create_app():
                 'debug': 'テンプレートまたはデータベース接続の問題が発生しました'
             })
     
+    # SQLiteフォールバック接続テスト
+    @app.route('/api/fallback-test')
+    def fallback_test():
+        try:
+            # SQLiteフォールバックでアプリケーションを動作させる
+            import sqlite3
+            import os
+            
+            # 一時的なSQLiteデータベースを作成
+            db_path = '/tmp/fallback.db'
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # 基本テーブルを作成
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    email TEXT,
+                    role TEXT DEFAULT 'user'
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS products (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    price REAL NOT NULL,
+                    description TEXT,
+                    image_url TEXT,
+                    category TEXT
+                )
+            ''')
+            
+            # テストデータ挿入
+            cursor.execute("""
+                INSERT OR IGNORE INTO users (username, password, email, role) 
+                VALUES ('admin', 'admin123', 'admin@shop.com', 'admin')
+            """)
+            
+            cursor.execute("""
+                INSERT OR IGNORE INTO products (name, price, description, category) 
+                VALUES ('Test Product', 19.99, 'テスト商品です', 'electronics')
+            """)
+            
+            conn.commit()
+            
+            # データ確認
+            cursor.execute("SELECT * FROM users")
+            users = cursor.fetchall()
+            
+            cursor.execute("SELECT * FROM products")
+            products = cursor.fetchall()
+            
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'method': 'sqlite_fallback',
+                'message': 'SQLite fallback database created successfully',
+                'users_count': len(users),
+                'products_count': len(products),
+                'sample_users': users[:2],
+                'sample_products': products[:2]
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'error_type': type(e).__name__
+            })
+
     # 代替接続エンドポイント（IPv6無効・IPv4強制）
     @app.route('/api/alt-connect')
     def alt_connect():
@@ -431,8 +505,24 @@ def create_app():
                 alternate_urls.append(('pooler_mode', pooler_url))
                 
                 # direct-mode を試行
-                direct_url = original_url.replace('aws-0-ap-northeast-1', 'db.ucekealywqkiirpndaut.supabase.co')
+                direct_url = original_url.replace('aws-0-ap-northeast-1.compute.amazonaws.com', 'db.ucekealywqkiirpndaut.supabase.co')
                 alternate_urls.append(('direct_mode', direct_url))
+                
+                # IPv4アドレス直接接続を試行（DNS回避）
+                # Supabaseの一般的なIPアドレス範囲
+                ipv4_addresses = [
+                    '54.230.149.200',  # AWS CloudFront IP例
+                    '52.84.106.25',    # AWS CloudFront IP例  
+                    '3.33.155.128'     # AWS CloudFront IP例
+                ]
+                
+                for ip in ipv4_addresses:
+                    ip_url = original_url.replace('aws-0-ap-northeast-1.compute.amazonaws.com', ip)
+                    alternate_urls.append((f'ipv4_direct_{ip}', ip_url))
+                
+                # SSL無効での接続も試行
+                ssl_disabled_url = original_url + '?sslmode=disable'
+                alternate_urls.append(('ssl_disabled', ssl_disabled_url))
             
             results = []
             

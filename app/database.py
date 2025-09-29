@@ -18,16 +18,37 @@ class DatabaseConfig:
         print(f"🔍 SUPABASE_URL: {'✅' if self.supabase_url else '❌'}")
         print(f"🔍 DATABASE_URL: {'✅' if self.database_url else '❌'}")
         
-        self.use_postgres = bool(self.database_url)
+        # 接続テストを実行してフォールバックを決定
+        self.use_postgres = self._test_postgres_connection()
         
         # Supabaseクライアントの初期化
-        if self.supabase_url and self.supabase_key:
+        if self.supabase_url and self.supabase_key and self.use_postgres:
             try:
                 self.supabase: Client = create_client(self.supabase_url, self.supabase_key)
                 print("✅ Supabaseクライアント初期化成功")
             except Exception as e:
                 print(f"❌ Supabaseクライアント初期化エラー: {e}")
                 self.use_postgres = False
+                
+    def _test_postgres_connection(self):
+        """PostgreSQLの接続テストを実行"""
+        if not self.database_url:
+            print("❌ DATABASE_URLが設定されていません - SQLiteにフォールバック")
+            return False
+            
+        try:
+            # 短いタイムアウトで接続テスト
+            conn = psycopg2.connect(self.database_url, connect_timeout=5)
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            cursor.close()
+            conn.close()
+            print("✅ PostgreSQL接続成功")
+            return True
+        except Exception as e:
+            print(f"❌ PostgreSQL接続失敗: {e}")
+            print("🔄 SQLiteフォールバックモードを使用")
+            return False
         
     def get_db_connection(self):
         """データベース接続を取得"""
